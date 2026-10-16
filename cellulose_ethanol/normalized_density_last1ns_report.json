@@ -1,0 +1,21 @@
+{
+  "time_window_ps": [
+    1000,
+    2000
+  ],
+  "frames": 201,
+  "bins": 200,
+  "bulk_reference_kg_m3": 762.398,
+  "bulk_reference_is_preliminary": true,
+  "centering": "Cellulose center, per frame; both surfaces retained without symmetrization",
+  "outer_region_definition": "2.5 <= abs(z) <= Lz/2 nm, a diagnostic region rather than an independently established bulk plateau",
+  "outer_region_negative_z_density_kg_m3": 732.8597948717949,
+  "outer_region_positive_z_density_kg_m3": 732.0526666666667,
+  "maximum_density_over_bulk": 1.2382272776161534,
+  "checks": {
+    "ethanol_integrated_mass_Da": 46067.99721864547,
+    "expected_ethanol_mass_Da": 46068.0,
+    "independent_raw_coordinate_histogram_max_bin_difference_kg_m3": 1.572776802713065,
+    "periodic_chain_shift_warnings": "GROMACS reports inconsistent shifts for periodic cellulose chains. An independent histogram from raw trajectory coordinates confirms the Z profile to within 1.6 kg/m3 per bin."
+  }
+}

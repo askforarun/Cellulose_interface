@@ -244,6 +244,32 @@ At completion, `density.xvg` records the sampling-stage density versus time. `de
 
 These durations are initial choices, not an automatic convergence guarantee. Inspect density and volume traces and compare averages over successive time blocks. If they are still drifting, extend equilibration and exclude the transient period from the density estimate. Compare a stable bulk reference with the ethanol density plateau away from cellulose surfaces, using matching temperature, force field, and nonbonded settings. The model's density should be measured rather than forced to equal the initial packing target.
 
+## Interfacial density relative to the bulk liquid
+
+The ethanol profile over the final 1 ns of interface NVT (1,000–2,000 ps) is centered on the cellulose slab and keeps both interfaces visible. It uses 200 bins along Z and is not symmetrized. Each ethanol mass-density bin is divided by the pure-liquid mean over its final 1 ns (2,000–3,000 ps): **762.398 kg/m³**. A dashed horizontal line at **1** represents this simulated bulk density. The bulk reference remains preliminary because its density still showed some drift.
+
+Generate the GROMACS profile on the cluster:
+
+```bash
+cd cellulose_ethanol
+sbatch analyze_density.sbatch
+```
+
+Once that job finishes, plot from the project root using a Python environment with Matplotlib:
+
+```bash
+python plot_density_profile.py \
+  --profile cellulose_ethanol/density_z_last1ns.xvg \
+  --bulk-report cellulose_ethanol/pure_ethanol/last1ns_density_report.json \
+  --output-prefix cellulose_ethanol/normalized_density_last1ns \
+  --label Ethanol \
+  --window 'NVT: 1–2 ns'
+```
+
+Outputs are a PNG, PDF, and CSV containing Z, absolute liquid density, and normalized density. Values above 1 indicate local enrichment relative to the pure-liquid reference; values below 1 indicate depletion. The present outer liquid regions (`abs(z) >= 2.5 nm`) average approximately **0.96 times bulk**, while the first adsorption peaks reach approximately **1.2 times bulk**. These profiles alone do not establish equilibration.
+
+GROMACS reports periodic-chain shift warnings during the analysis. An independent histogram of raw trajectory coordinates reproduced the liquid profile within 1.6 kg/m³ per bin, and integrating the profile recovered the expected total ethanol mass. The check and normalization details are recorded in `normalized_density_last1ns_report.json`.
+
 ## Other liquids and troubleshooting
 
 - Change SMILES, residue name, molecular charge, molecule count, and target packing density consistently for another liquid. This parameterizer specifically uses GAFF2/AM1-BCC; assess whether that model is suitable for the molecule and study.

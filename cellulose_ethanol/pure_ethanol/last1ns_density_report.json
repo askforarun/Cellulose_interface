@@ -1,0 +1,19 @@
+{
+  "system": "1000 pure ethanol molecules, GAFF2/AM1-BCC",
+  "ensemble": "isotropic NPT",
+  "time_window_ps": [
+    2000,
+    3000
+  ],
+  "source": "GROMACS energy statistics from npt_sample.edr; 5001 energy points",
+  "density_mean_kg_m3": 762.398,
+  "density_block_error_estimate_kg_m3": 0.85,
+  "density_rmsd_kg_m3": 6.03227,
+  "density_fitted_total_drift_kg_m3": 4.43787,
+  "density_mean_g_cm3": 0.762398,
+  "saved_trajectory_density_half_window_means_kg_m3": {
+    "2000_to_before_2500_ps": 761.772935204,
+    "2500_to_before_3000_ps": 762.941326784
+  },
+  "interpretation": "Preliminary reference density; remaining positive drift means strict convergence is not established."
+}
