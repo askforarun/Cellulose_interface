@@ -266,7 +266,7 @@ python plot_density_profile.py \
   --window 'NVT: 1–2 ns'
 ```
 
-Outputs are a PNG, PDF, and CSV containing Z, absolute liquid density, and normalized density. Values above 1 indicate local enrichment relative to the pure-liquid reference; values below 1 indicate depletion. The present outer liquid regions (`abs(z) >= 2.5 nm`) average approximately **0.96 times bulk**, while the first adsorption peaks reach approximately **1.2 times bulk**. These profiles alone do not establish equilibration.
+Outputs are a PNG, PDF, and CSV containing Z, absolute liquid density, and normalized density. The profile is a time average over 201 saved frames (5 ps spacing), not a single snapshot or an average over independent replicas. For a less noisy spatial resolution, add `--bin-average 2` and use output prefix `cellulose_ethanol/normalized_density_last1ns_rebinned`. This combines adjacent bins into 100 bins (approximately 0.083 nm wide) and preserves the integrated mass; it adds no new sampling. The original 200-bin results remain available. Values above 1 indicate local enrichment relative to the pure-liquid reference; values below 1 indicate depletion. The present outer liquid regions (`abs(z) >= 2.5 nm`) average approximately **0.96 times bulk**, while the first adsorption peaks reach approximately **1.2 times bulk**. These profiles alone do not establish equilibration.
 
 GROMACS reports periodic-chain shift warnings during the analysis. An independent histogram of raw trajectory coordinates reproduced the liquid profile within 1.6 kg/m³ per bin, and integrating the profile recovered the expected total ethanol mass. The check and normalization details are recorded in `normalized_density_last1ns_report.json`.
 

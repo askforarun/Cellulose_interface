@@ -12,6 +12,7 @@ def main():
     parser.add_argument('--bulk-report', type=Path, required=True, help='JSON with density_mean_kg_m3')
     parser.add_argument('--liquid-column', type=int, default=1, help='Liquid data column, zero-based (default: 1)')
     parser.add_argument('--output-prefix', type=Path, required=True)
+    parser.add_argument('--bin-average', type=int, default=1, help='Combine this many adjacent equal-width bins (default: 1)')
     parser.add_argument('--label', default='Liquid')
     parser.add_argument('--window', default='Final 1 ns of NVT')
     args = parser.parse_args()
@@ -29,6 +30,17 @@ def main():
         parser.error('Missing liquid density column or profile data')
     z = [r[0] for r in rows]
     rho = [r[args.liquid_column] for r in rows]
+    original_bins = len(z)
+    if args.bin_average < 1 or original_bins % args.bin_average:
+        parser.error('--bin-average must be a positive divisor of the input bin count')
+    if args.bin_average > 1:
+        from statistics import mean
+        spacings = [z[i+1] - z[i] for i in range(len(z)-1)]
+        if max(spacings) - min(spacings) > abs(mean(spacings))*0.001:
+            parser.error('Combining bins requires equally spaced input bins')
+        width = args.bin_average
+        z = [mean(z[i:i+width]) for i in range(0, original_bins, width)]
+        rho = [mean(rho[i:i+width]) for i in range(0, original_bins, width)]
     normalized = [value / bulk for value in rho]
     args.output_prefix.parent.mkdir(parents=True, exist_ok=True)
     with args.output_prefix.with_suffix('.csv').open('w', newline='') as handle:
@@ -41,7 +53,7 @@ def main():
     ax.axhline(1, color='#333333', linestyle='--', linewidth=1.2, label='Bulk reference = 1')
     ax.set(xlabel='z relative to cellulose center (nm)', ylabel=r'$\rho_{\mathrm{liquid}}(z)\,/\,\rho_{\mathrm{bulk}}$',
            xlim=(min(z), max(z)), ylim=(0, max(1.2, max(normalized)*1.1)))
-    ax.set_title(f'{args.label} density at the cellulose interface\n{args.window}', fontsize=12)
+    ax.set_title(f'{args.label} density at the cellulose interface\n{args.window} · {len(z)} spatial bins', fontsize=12)
     ax.grid(axis='y', alpha=0.18)
     ax.legend(frameon=False)
     fig.text(0.5, -0.025, f'Simulated bulk reference: {bulk/1000:.6f} g/cm³ (preliminary; some density drift remains)',
@@ -49,7 +61,7 @@ def main():
     for suffix in ('.png', '.pdf'):
         fig.savefig(args.output_prefix.with_suffix(suffix), dpi=300, bbox_inches='tight')
     plt.close(fig)
-    print(f'Normalized {len(rows)} bins using bulk density {bulk:.6f} kg/m³')
+    print(f'Normalized {len(z)} bins using bulk density {bulk:.6f} kg/m³')
     print(f'Saved {args.output_prefix}.csv, .png, and .pdf')
 
 
