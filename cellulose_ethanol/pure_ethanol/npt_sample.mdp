@@ -1,0 +1,36 @@
+; 2 ns density sampling; starts at 1 ns on the combined time axis.
+nsteps                  = 1000000
+tinit                   = 1000
+continuation            = yes
+gen-vel                 = no
+integrator              = md
+dt                      = 0.002
+constraints             = h-bonds
+constraint-algorithm    = lincs
+lincs-order             = 4
+lincs-iter              = 1
+tcoupl                  = V-rescale
+tc-grps                 = System
+tau-t                   = 1.0
+ref-t                   = 298.15
+pcoupl                  = C-rescale
+pcoupltype              = isotropic
+tau-p                   = 5.0
+ref-p                   = 1.0
+; Barostat coupling parameter; density is determined by the force field.
+compressibility         = 4.5e-5
+nstxout                 = 0
+nstvout                 = 0
+nstfout                 = 0
+nstxout-compressed      = 2500
+nstenergy               = 500
+nstlog                  = 500
+cutoff-scheme           = Verlet
+nstlist                 = 20
+coulombtype             = PME
+rcoulomb                = 1.0
+vdwtype                 = Cut-off
+rvdw                    = 1.0
+DispCorr                = EnerPres
+pbc                     = xyz
+periodic-molecules      = no

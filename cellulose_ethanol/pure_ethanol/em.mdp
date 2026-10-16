@@ -1,0 +1,17 @@
+; Pure ethanol: no position restraints.
+integrator              = steep
+emtol                   = 500
+emstep                  = 0.01
+nsteps                  = 50000
+constraints             = none
+nstenergy               = 100
+nstlog                  = 100
+cutoff-scheme           = Verlet
+nstlist                 = 20
+coulombtype             = PME
+rcoulomb                = 1.0
+vdwtype                 = Cut-off
+rvdw                    = 1.0
+DispCorr                = EnerPres
+pbc                     = xyz
+periodic-molecules      = no

@@ -40,3 +40,7 @@ cellulose_ethanol/inputs.ready
 # OS/editor files
 .DS_Store
 *.swp
+
+# Pure-liquid generated coordinates (retain the single-molecule template)
+cellulose_ethanol/pure_ethanol/*.gro
+!cellulose_ethanol/pure_ethanol/ethanol.gro
