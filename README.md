@@ -288,6 +288,31 @@ Both scripts use `gmx convert-tpr -extend` and checkpoint continuation to preser
 
 The extra durations do not guarantee equilibration. Review late-time density/volume for the pure liquid and Z/Pzz for the interface, along with profiles in successive time windows. The interface script advances automatically to NVT; treat that segment as production only after these checks support equilibration. Existing normalized profiles refer to the original runs and preliminary bulk density, and must be regenerated from the new results before interpreting the extended system.
 
+## Results after the extended runs
+
+Both continuations finished successfully: pure ethanol reached 8 ns total NPT, and the interface reached 2.5 ns restrained fixed-X/Y NPT followed by a fresh 2 ns restrained NVT segment.
+
+The final pure-liquid reference, averaged over 7–8 ns, is **0.761501 g/cm³**, with a GROMACS block error estimate of **0.000680 g/cm³** and fitted total density drift of **+0.000914 g/cm³** over that window. See `pure_ethanol/extended_last1ns_density_report.json`.
+
+Outer-interface ethanol density (`abs(z) >= 2.5 nm` relative to the cellulose center), evaluated with the actual liquid-region volume, is:
+
+| Time within new NVT segment | Mean density (g/cm³) |
+| --- | --- |
+| 0–0.5 ns | 0.74023 |
+| 0.5–1.0 ns | 0.73831 |
+| 1.0–1.5 ns | 0.73844 |
+| 1.5–2.0 ns | 0.74026 |
+
+The successive profiles overlap closely and do not show a sustained monotonic change. The final-1-ns outer density is approximately **0.73936 g/cm³**, or **0.971 times** the updated pure-liquid reference. Thus, the outer liquid remains about 3% less dense than the simulated bulk reference despite the longer runs; temporal stability alone does not explain or remove this difference. These are finite-trajectory diagnostics, not proof of complete equilibration.
+
+Updated plots in `cellulose_ethanol/`:
+
+- `normalized_density_extended_last1ns.png` and `.pdf`: final-1-ns profile normalized by the updated bulk density, with the reference line at 1.
+- `extended_density_window_comparison.png` and `.pdf`: profiles in successive 0.5 ns windows of the new NVT segment.
+- `nvt_extended_density_windows.json` and `.csv`: window averages and per-frame outer-region densities.
+
+`analyze_extended_density.sbatch` regenerates the GROMACS profiles. Time in these profile files is absolute (2.5–4.5 ns), whereas the comparison plot labels time elapsed within the new NVT segment (0–2 ns). The updated plots use 100 spatial bins formed by averaging adjacent pairs of the 200 GROMACS bins. Original-run plots are retained for comparison.
+
 ## Other liquids and troubleshooting
 
 - Change SMILES, residue name, molecular charge, molecule count, and target packing density consistently for another liquid. This parameterizer specifically uses GAFF2/AM1-BCC; assess whether that model is suitable for the molecule and study.

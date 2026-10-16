@@ -1,0 +1,77 @@
+{
+  "method": "Ethanol mass density in outer regions, per-frame centering on cellulose mass center; actual NPT outer-region volume used for each frame. No symmetrization before separate-side averages.",
+  "windows": [
+    {
+      "window_ps": [
+        2500,
+        3000
+      ],
+      "frames": 100,
+      "2.0nm": {
+        "negative_mean_kg_m3": 741.5059285928073,
+        "positive_mean_kg_m3": 740.1339808992303,
+        "combined_mean_kg_m3": 740.8199547460189
+      },
+      "2.5nm": {
+        "negative_mean_kg_m3": 740.4001106412933,
+        "positive_mean_kg_m3": 740.0582417837358,
+        "combined_mean_kg_m3": 740.2291762125146
+      }
+    },
+    {
+      "window_ps": [
+        3000,
+        3500
+      ],
+      "frames": 100,
+      "2.0nm": {
+        "negative_mean_kg_m3": 738.8347456875455,
+        "positive_mean_kg_m3": 740.4601805576283,
+        "combined_mean_kg_m3": 739.6474631225869
+      },
+      "2.5nm": {
+        "negative_mean_kg_m3": 736.9742443178194,
+        "positive_mean_kg_m3": 739.6399105554741,
+        "combined_mean_kg_m3": 738.3070774366466
+      }
+    },
+    {
+      "window_ps": [
+        3500,
+        4000
+      ],
+      "frames": 100,
+      "2.0nm": {
+        "negative_mean_kg_m3": 738.4766654488349,
+        "positive_mean_kg_m3": 741.5207035222703,
+        "combined_mean_kg_m3": 739.9986844855526
+      },
+      "2.5nm": {
+        "negative_mean_kg_m3": 736.5821216370672,
+        "positive_mean_kg_m3": 740.300039244735,
+        "combined_mean_kg_m3": 738.441080440901
+      }
+    },
+    {
+      "window_ps": [
+        4000,
+        4500
+      ],
+      "frames": 101,
+      "2.0nm": {
+        "negative_mean_kg_m3": 740.6171452284871,
+        "positive_mean_kg_m3": 741.9520251753403,
+        "combined_mean_kg_m3": 741.2845852019137
+      },
+      "2.5nm": {
+        "negative_mean_kg_m3": 739.908463205288,
+        "positive_mean_kg_m3": 740.6205789932364,
+        "combined_mean_kg_m3": 740.2645210992622
+      }
+    }
+  ],
+  "last1ns_fitted_drift_kg_m3_per_ns": 1.4466983745136435,
+  "last1ns_outer_density_kg_m3": 739.3573366921173,
+  "bulk_reference_kg_m3": 761.501,
+  "last1ns_outer_over_bulk": 0.970921031872732
+}
