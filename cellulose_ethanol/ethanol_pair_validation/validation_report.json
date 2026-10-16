@@ -1,0 +1,30 @@
+{
+  "test": "ParmEd native GAFF2 type-1 pairs versus explicit GROMACS type-2 pairs",
+  "units": "kJ/mol",
+  "tolerance": 1e-05,
+  "passed": true,
+  "native": {
+    "Bond": 0.373527,
+    "Angle": 1.028991,
+    "Proper-Dih.": 0.007605,
+    "LJ-14": 0.690979,
+    "Coulomb-14": -34.822906,
+    "Potential": -8.548298
+  },
+  "explicit": {
+    "Bond": 0.373527,
+    "Angle": 1.028991,
+    "Proper-Dih.": 0.007605,
+    "LJ-14": 0.690979,
+    "Coulomb-14": -34.822906,
+    "Potential": -8.548298
+  },
+  "explicit_minus_native": {
+    "Bond": 0.0,
+    "Angle": 0.0,
+    "Proper-Dih.": 0.0,
+    "LJ-14": 0.0,
+    "Coulomb-14": 0.0,
+    "Potential": 0.0
+  }
+}

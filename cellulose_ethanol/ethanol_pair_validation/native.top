@@ -1,0 +1,107 @@
+;
+;   File /Users/arunsrikanthsridhar/Downloads/Cellulose_interface/cellulose_ethanol/ethanol_parameters/ethanol.top  was generated
+;   By user: arunsrikanthsridhar (501)
+;   On host:Aruns-MacBook-Pro.local 
+;   At date:Thu. October  4 20:58:26 2026 
+;
+;   This is a standalone topology file
+;
+;   Created by:
+;   ParmEd:       parameterize_molecule.py, VERSION4.3.1 
+;   Executable:   parameterize_molecule.py
+;   Library dir:  /opt/homebrew/Cellar/gromacs/2024.2/share/gromacs/top
+;   Command line:
+;     parameterize_molecule.py --smiles CCO --residue-name ETO --net-charge 0 --prefix ethanol --output-directory ethanol_parameters --obabel /usr/local/bin/obabel
+;
+
+[ defaults ]
+; nbfunc        comb-rule       gen-pairs       fudgeLJ fudgeQQ
+1               2               yes             0.5          0.83333333  
+
+[ atomtypes ]
+; name    at.num    mass    charge ptype  sigma      epsilon
+c3             6  12.010000  0.00000000  A     0.33977095      0.4510352
+oh             8  16.000000  0.00000000  A     0.32428713       0.389112
+hc             1   1.008000  0.00000000  A      0.2600177      0.0870272
+h1             1   1.008000  0.00000000  A     0.24219973      0.0870272
+ho             1   1.008000  0.00000000  A    0.053792465      0.0196648
+
+[ moleculetype ]
+; Name            nrexcl
+ETO          3
+
+[ atoms ]
+;   nr       type  resnr residue  atom   cgnr    charge       mass  typeB    chargeB      massB
+; residue    1 ETO rtp ETO q 0.0
+    1         c3      1    ETO     C1      1 -0.13610000  12.010000   ; qtot -0.136100
+    2         c3      1    ETO     C2      2 0.12640000  12.010000   ; qtot -0.009700
+    3         oh      1    ETO     O1      3 -0.59980000  16.000000   ; qtot -0.609500
+    4         hc      1    ETO     H1      4 0.04236700   1.008000   ; qtot -0.567133
+    5         hc      1    ETO     H2      5 0.04236700   1.008000   ; qtot -0.524766
+    6         hc      1    ETO     H3      6 0.04236700   1.008000   ; qtot -0.482399
+    7         h1      1    ETO     H4      7 0.04320000   1.008000   ; qtot -0.439199
+    8         h1      1    ETO     H5      8 0.04320000   1.008000   ; qtot -0.395999
+    9         ho      1    ETO     H6      9 0.39600000   1.008000   ; qtot 0.000001
+
+[ bonds ]
+;    ai     aj funct         c0         c1         c2         c3
+      1      2     1   0.15354 191535.152000
+      2      3     1   0.14242 238613.520000
+      1      4     1   0.10962 288905.200000
+      1      5     1   0.10962 288905.200000
+      1      6     1   0.10962 288905.200000
+      2      7     1   0.10969 288043.296000
+      2      8     1   0.10969 288043.296000
+      3      9     1   0.09725 448114.768000
+
+[ pairs ]
+;    ai     aj funct         c0         c1         c2         c3
+      1      9     1
+      4      3     1
+      5      3     1
+      6      3     1
+      4      7     1
+      4      8     1
+      5      7     1
+      5      8     1
+      6      7     1
+      6      8     1
+      7      9     1
+      8      9     1
+
+[ angles ]
+;    ai     aj     ak funct         c0         c1         c2         c3
+      1      2      3     1   109.6600471 642.578720
+      1      2      7     1   109.5900471 362.167040
+      1      2      8     1   109.5900471 362.167040
+      2      1      4     1   109.6800468 362.083360
+      2      1      5     1   109.6800468 362.083360
+      2      1      6     1   109.6800468 362.083360
+      2      3      9     1   107.3900462 545.007840
+      3      2      7     1   110.3800471 471.034720
+      3      2      8     1   110.3800471 471.034720
+      4      1      5     1   107.7300462 299.574400
+      4      1      6     1   107.7300462 299.574400
+      5      1      6     1   107.7300462 299.574400
+      7      2      8     1   108.5500468 298.235520
+
+[ dihedrals ]
+;    ai     aj     ak     al funct         c0         c1         c2         c3         c4         c5
+      1      2      3      9     1  0.0000000  0.2510400  3
+      4      1      2      3     1  0.0000000  0.3765600  3
+      5      1      2      3     1  0.0000000  0.3765600  3
+      6      1      2      3     1  0.0000000  0.3765600  3
+      4      1      2      7     1  0.0000000  0.6508444  3
+      4      1      2      8     1  0.0000000  0.6508444  3
+      5      1      2      7     1  0.0000000  0.6508444  3
+      5      1      2      8     1  0.0000000  0.6508444  3
+      6      1      2      7     1  0.0000000  0.6508444  3
+      6      1      2      8     1  0.0000000  0.6508444  3
+      7      2      3      9     1  0.0000000  0.5146320  3
+      8      2      3      9     1  0.0000000  0.5146320  3
+
+[ system ]
+Ethanol pair-scaling validation
+
+[ molecules ]
+ETO 1

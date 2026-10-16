@@ -1,0 +1,11 @@
+#include "forcefield.itp"
+#include "primary.itp"
+#include "secondary.itp"
+
+[ system ]
+Cellulose I-beta ethanol interface
+
+[ molecules ]
+CELLULOSE_CHAIN 14
+CELLULOSE_CHAIN_RESTRAINED 14
+ETO 1000
