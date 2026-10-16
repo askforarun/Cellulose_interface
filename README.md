@@ -160,7 +160,7 @@ epsilon14 = sqrt(epsilon_i * epsilon_j) * secondary_fudgeLJ
 pair_fudgeQQ = secondary_fudgeQQ
 ```
 
-Consequently, retaining GLYCAM global defaults does not remove the liquid's original 1–4 scaling. These per-pair scaling settings apply to intramolecular 1–4 interactions; it does not introduce a separate scaling factor for cellulose–liquid interactions. `parameterize_molecule.py` also writes an explicit-pair molecule ITP, but the combiner should receive the native secondary `.top` so that it can read its original defaults and type-1 pairs. Do not apply the conversion twice.
+Although the global scaling factors are set to 1.0 for GLYCAM, ethanol retains GAFF2’s reduced 1–4 scaling because those factors are specified directly for each ethanol 1–4 pair. These per-pair scaling settings apply to intramolecular 1–4 interactions; it does not introduce a separate scaling factor for cellulose–liquid interactions. `parameterize_molecule.py` also writes an explicit-pair molecule ITP, but the combiner should receive the native secondary `.top` so that it can read its original defaults and type-1 pairs. Do not apply the conversion twice.
 
 The current converter supports combination rule 2 and ordinary three-field type-1 secondary pair rows. It rejects other pair formats rather than assuming their meaning. Review the source force-field conventions when introducing another liquid or topology source.
 
