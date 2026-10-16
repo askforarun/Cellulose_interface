@@ -44,3 +44,10 @@ cellulose_ethanol/inputs.ready
 # Pure-liquid generated coordinates (retain the single-molecule template)
 cellulose_ethanol/pure_ethanol/*.gro
 !cellulose_ethanol/pure_ethanol/ethanol.gro
+
+# Continuation-stage generated outputs and completion markers
+cellulose_ethanol/npt_extended*.gro
+cellulose_ethanol/nvt_production_extended.gro
+*.done
+.*_offsets.npz
+.*_offsets.lock

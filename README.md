@@ -270,6 +270,24 @@ Outputs are a PNG, PDF, and CSV containing Z, absolute liquid density, and norma
 
 GROMACS reports periodic-chain shift warnings during the analysis. An independent histogram of raw trajectory coordinates reproduced the liquid profile within 1.6 kg/m³ per bin, and integrating the profile recovered the expected total ethanol mass. The check and normalization details are recorded in `normalized_density_last1ns_report.json`.
 
+## Extending equilibration and restarting production
+
+Keep the existing results and continue from saved NPT checkpoints:
+
+```bash
+cd cellulose_ethanol
+sbatch extend_interface.sbatch
+cd pure_ethanol
+sbatch extend_pure_ethanol.sbatch
+```
+
+- **Interface:** `extend_interface.sbatch` extends the original restrained NPT by 2 ns, giving 2.5 ns total NPT, with X/Y fixed and Z free to relax. It then runs a fresh 2 ns restrained NVT segment, with time axis 2.5–4.5 ns, from the extended NPT coordinates and velocities. The NVT restraint reference is reset to the final NPT geometry.
+- **Pure liquid:** `extend_pure_ethanol.sbatch` adds 5 ns to the original NPT calculation, giving 8 ns total including initial equilibration. It extracts the density over 7–8 ns to `extended_last1ns_density.xvg` and `extended_last1ns_density_summary.txt`, and writes density/temperature/pressure/volume for the continuation to `extended_observables.xvg`.
+
+Both scripts use `gmx convert-tpr -extend` and checkpoint continuation to preserve the original NPT parameters. The interface continuation therefore retains the original scaled restraint reference, rather than replacing it at the start of the NPT extension. New NPT outputs use the `npt_extended` prefix and GROMACS part numbers; the original outputs remain intact. New interface NVT outputs use `nvt_production_extended`. Do not run multiple continuation jobs in the same directory at once.
+
+The extra durations do not guarantee equilibration. Review late-time density/volume for the pure liquid and Z/Pzz for the interface, along with profiles in successive time windows. The interface script advances automatically to NVT; treat that segment as production only after these checks support equilibration. Existing normalized profiles refer to the original runs and preliminary bulk density, and must be regenerated from the new results before interpreting the extended system.
+
 ## Other liquids and troubleshooting
 
 - Change SMILES, residue name, molecular charge, molecule count, and target packing density consistently for another liquid. This parameterizer specifically uses GAFF2/AM1-BCC; assess whether that model is suitable for the molecule and study.
