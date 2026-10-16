@@ -1,0 +1,11 @@
+#include "forcefield_3000.itp"
+#include "primary_3000.itp"
+#include "secondary_3000.itp"
+
+[ system ]
+Cellulose I-beta ethanol interface: 1500 ethanol molecules per face
+
+[ molecules ]
+CELLULOSE_CHAIN 14
+CELLULOSE_CHAIN_RESTRAINED 14
+ETO 3000

@@ -313,6 +313,32 @@ Updated plots in `cellulose_ethanol/`:
 
 `analyze_extended_density.sbatch` regenerates the GROMACS profiles. Time in these profile files is absolute (2.5–4.5 ns), whereas the comparison plot labels time elapsed within the new NVT segment (0–2 ns). The updated plots use 100 spatial bins formed by averaging adjacent pairs of the 200 GROMACS bins. Original-run plots are retained for comparison.
 
+## Larger liquid reservoir: 1,500 ethanol molecules per surface
+
+The larger-reservoir comparison contains **3,000 ethanol molecules total**, with 1,500 initially packed on each cellulose surface. It retains the original GLYCAM cellulose slab and the same GAFF2/AM1-BCC ethanol parameters, including the per-pair 1–4 scaling representation. The generated primary and secondary molecule ITPs were checked to be byte-identical to those of the original interface.
+
+All case files remain directly in `cellulose_ethanol/` and use `_3000` names, preserving the previous simulations. The initial box is approximately **4.1751 × 4.1520 × 19.5250 nm**, with an initial geometric liquid thickness of **8.69 nm per face**. Packing used the updated simulated pure-liquid reference of **0.761501 g/cm³** as an initial density target, not a constraint on the final NPT density. `interface_3000_build_report.json` records the construction checks, including 31,704 total atoms and 1,500 liquid molecules per face.
+
+Packing command from the project root (activate an environment with Open Babel and Packmol, or provide their executable paths):
+
+```bash
+python pack_liquid_cellulose.py \
+  --cellulose-coordinates cellulose_ethanol/cellulose.gro \
+  --smiles CCO --residue-name ETO \
+  --molecules 3000 --density 0.761501 \
+  --seed 20261016 --maxit 200 --nloop 20 \
+  --output cellulose_ethanol/interface_3000.pdb
+```
+
+The assembled starting files are `interface_3000.gro`, `system_3000.top`, `forcefield_3000.itp`, `primary_3000.itp`, and `secondary_3000.itp`. The combined topology uses the same cellulose molecule counts as before and `ETO 3000`; its include paths refer to the case-specific ITP filenames.
+
+```bash
+cd cellulose_ethanol
+sbatch run_interface_3000.sbatch
+```
+
+This job runs restrained steepest-descent minimization followed by **2.5 ns NPT** at 298.15 K and 1 bar. It uses C-rescale semi-isotropic pressure coupling with `compressibility = 0.0 4.5e-5`, keeping X/Y fixed while Z relaxes. Middle-layer heavy-atom position restraints remain enabled with `POSRES_CELLULOSE`. Output prefixes are `em_3000` and `npt_3000`. This job stops after NPT; it does not automatically launch NVT. Compare late-time liquid density profiles with the smaller reservoir and pure-liquid reference before deciding the next stage.
+
 ## Other liquids and troubleshooting
 
 - Change SMILES, residue name, molecular charge, molecule count, and target packing density consistently for another liquid. This parameterizer specifically uses GAFF2/AM1-BCC; assess whether that model is suitable for the molecule and study.

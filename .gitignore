@@ -51,3 +51,7 @@ cellulose_ethanol/nvt_production_extended.gro
 *.done
 .*_offsets.npz
 .*_offsets.lock
+
+# Larger-reservoir runtime coordinates
+cellulose_ethanol/em_3000.gro
+cellulose_ethanol/npt_3000.gro
