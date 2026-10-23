@@ -55,3 +55,17 @@ cellulose_ethanol/nvt_production_extended.gro
 # Larger-reservoir runtime coordinates
 cellulose_ethanol/em_3000.gro
 cellulose_ethanol/npt_3000.gro
+
+# Analysis, plotting, and report outputs (not part of the setup example)
+plot_density_profile.py
+cellulose_ethanol/analyze_density*.sbatch
+cellulose_ethanol/analyze_extended_density.sbatch
+cellulose_ethanol/density_*
+cellulose_ethanol/extended_density_*
+cellulose_ethanol/normalized_density_*
+cellulose_ethanol/*_density_windows.*
+cellulose_ethanol/interface.pdf
+cellulose_ethanol/interface_report.*
+cellulose_ethanol/pure_ethanol/*.xvg
+cellulose_ethanol/pure_ethanol/*.txt
+cellulose_ethanol/pure_ethanol/*_report.json
