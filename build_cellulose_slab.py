@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a dimension-driven cellulose slab with an installed CelluloseForge 1.0.0."""
+"""Build a dimension-driven cellulose slab with an installed CelluloseForge 1.1.0."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 
-VERSION = "0.2.0"
+VERSION = "0.2.1"
 DEFAULT_FORGE = "cellulose-forge"
 
 
@@ -46,7 +46,7 @@ def cli() -> int:
     if forge is None:
         parser.error(
             f"CelluloseForge executable {args.cellulose_forge_executable!r} not found; "
-            "install CelluloseForge 1.0.0 or pass --cellulose-forge-executable"
+            "install CelluloseForge 1.1.0 or pass --cellulose-forge-executable"
         )
 
     command = [

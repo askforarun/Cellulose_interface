@@ -2,7 +2,7 @@
 
 Build a crystalline cellulose slab with **GLYCAM**, parameterize a small liquid molecule, pack liquid on both surfaces, and prepare a combined GROMACS system. The example below uses cellulose I-beta (110) and ethanol.
 
-The force-field assignment for this project is **GLYCAM06j-1 for cellulose** (`leaprc.GLYCAM_06j-1`) and **GAFF2/AM1-BCC for ethanol**. The cellulose builder defaults to `glycam`, and the build command below explicitly selects it. The saved `cellulose_ethanol/cellulose_build_report.json` records GLYCAM and this release for the provided cellulose structure. The liquid parameterization script generates GAFF2 parameters; it does not parameterize cellulose.
+The force-field assignment for this project is **GLYCAM06j-1 for cellulose** (`leaprc.GLYCAM_06j-1`) and **GAFF2/AM1-BCC for ethanol**. The cellulose builder defaults to `glycam`, and the build command below explicitly selects it. The saved `cellulose_ethanol/cellulose_build_report.json` records GLYCAM for the provided cellulose structure. It was produced by the CelluloseForge development build that became 1.1.0; because it predates the version bump it reports `1.0.0`, but it already uses the 1.1.0 slab frame (surface normal along `-z`) and heavy-atom-only restraint selection. The liquid parameterization script generates GAFF2 parameters; it does not parameterize cellulose.
 
 Run commands from the `Cellulose_interface` project root.
 
@@ -10,7 +10,7 @@ Run commands from the `Cellulose_interface` project root.
 
 | File or directory | Purpose |
 | --- | --- |
-| `build_cellulose_slab.py` | Call the installed `cellulose-forge` command (CelluloseForge 1.0.0) to generate the slab and its topology |
+| `build_cellulose_slab.py` | Call the installed `cellulose-forge` command (CelluloseForge 1.1.0) to generate the slab and its topology |
 | `parameterize_molecule.py` | Generate GAFF2/AM1-BCC small-molecule parameters using AmberTools and ParmEd |
 | `pack_liquid_cellulose.py` | Use Packmol to place liquid on both sides of the cellulose slab |
 | `combine_gromacs_topologies.py` | Combine topologies and convert packed coordinates to GROMACS format |
@@ -21,7 +21,7 @@ Run commands from the `Cellulose_interface` project root.
 ## Requirements
 
 - Python 3.11 or newer.
-- [CelluloseForge 1.0.0](https://github.com/askforarun/cellulose-forge/releases/tag/v1.0.0) for building cellulose, providing the `cellulose-forge` command (see below).
+- [CelluloseForge 1.1.0](https://github.com/askforarun/cellulose-forge/releases/tag/v1.1.0) for building cellulose, providing the `cellulose-forge` command (see below).
 - AmberTools: `antechamber`, `parmchk2`, `tleap`, and the GLYCAM parameter files for the cellulose example.
 - ParmEd importable by the Python interpreter used for parameterization.
 - Open Babel (`obabel`) and Packmol (`packmol`) on PATH. Packmol must support the `pbc` input keyword.
@@ -29,12 +29,12 @@ Run commands from the `Cellulose_interface` project root.
 
 Activate your AmberTools environment before parameterization. Installing this project's Python package does not install CelluloseForge, the external simulation tools, or force fields.
 
-### Install CelluloseForge 1.0.0
+### Install CelluloseForge 1.1.0
 
-CelluloseForge is not yet on PyPI. Install the tagged 1.0.0 release from GitHub into the environment you use for this workflow:
+CelluloseForge is not yet on PyPI. Install the tagged 1.1.0 release from GitHub into the environment you use for this workflow:
 
 ```bash
-python -m pip install "cellulose-forge @ git+https://github.com/askforarun/cellulose-forge.git@v1.0.0"
+python -m pip install "cellulose-forge @ git+https://github.com/askforarun/cellulose-forge.git@v1.1.0"
 cellulose-forge --help
 ```
 
@@ -303,7 +303,7 @@ This job runs restrained steepest-descent minimization followed by **2.5 ns NPT*
 - Change SMILES, residue name, molecular charge, molecule count, and target packing density consistently for another liquid. This parameterizer specifically uses GAFF2/AM1-BCC; assess whether that model is suitable for the molecule and study.
 - For missing executables, activate the relevant environment or supply the scripts' executable-path options. Use `python SCRIPT.py --help` for all supported flags.
 - If ParmEd cannot be imported, run parameterization with the Python interpreter in your AmberTools/ParmEd environment.
-- If the cellulose builder cannot find CelluloseForge, install the 1.0.0 release as above, or pass `--cellulose-forge-executable` with the path to `cellulose-forge`.
+- If the cellulose builder cannot find CelluloseForge, install the 1.1.0 release as above, or pass `--cellulose-forge-executable` with the path to `cellulose-forge`.
 - If packing fails, review liquid count, target density, tolerance, and retry settings.
 - If restraints are inactive, confirm that the topology contains `#ifdef POSRES_CELLULOSE` and that the processed MDP enables it.
 - If GROMACS reports an atom-order/count mismatch, check the coordinate/topology pair and consistent liquid atom/residue naming.
