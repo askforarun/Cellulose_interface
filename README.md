@@ -10,7 +10,7 @@ Run commands from the `Cellulose_interface` project root.
 
 | File or directory | Purpose |
 | --- | --- |
-| `build_cellulose_slab.py` | Call an external CelluloseForge checkout to generate the slab and its topology |
+| `build_cellulose_slab.py` | Call the installed `cellulose-forge` command (CelluloseForge 1.0.0) to generate the slab and its topology |
 | `parameterize_molecule.py` | Generate GAFF2/AM1-BCC small-molecule parameters using AmberTools and ParmEd |
 | `pack_liquid_cellulose.py` | Use Packmol to place liquid on both sides of the cellulose slab |
 | `combine_gromacs_topologies.py` | Combine topologies and convert packed coordinates to GROMACS format |
@@ -21,13 +21,24 @@ Run commands from the `Cellulose_interface` project root.
 ## Requirements
 
 - Python 3.11 or newer.
-- A separate CelluloseForge checkout and `uv` for building cellulose. The default checkout location is `../cellulose_functionalization`; supply `--cellulose-forge-directory` if it is elsewhere. That default checkout is not included in this folder.
+- [CelluloseForge 1.0.0](https://github.com/askforarun/cellulose-forge/releases/tag/v1.0.0) for building cellulose, providing the `cellulose-forge` command (see below).
 - AmberTools: `antechamber`, `parmchk2`, `tleap`, and the GLYCAM parameter files for the cellulose example.
 - ParmEd importable by the Python interpreter used for parameterization.
 - Open Babel (`obabel`) and Packmol (`packmol`) on PATH. Packmol must support the `pbc` input keyword.
 - GROMACS for preprocessing and simulation; Slurm for the supplied batch script.
 
-Activate your AmberTools environment before parameterization. Installing this project's Python package does not install the external simulation tools or force fields.
+Activate your AmberTools environment before parameterization. Installing this project's Python package does not install CelluloseForge, the external simulation tools, or force fields.
+
+### Install CelluloseForge 1.0.0
+
+CelluloseForge is not yet on PyPI. Install the tagged 1.0.0 release from GitHub into the environment you use for this workflow:
+
+```bash
+python -m pip install "cellulose-forge @ git+https://github.com/askforarun/cellulose-forge.git@v1.0.0"
+cellulose-forge --help
+```
+
+`build_cellulose_slab.py` runs `cellulose-forge` from your PATH. Pass `--cellulose-forge-executable /path/to/cellulose-forge` if it is installed elsewhere.
 
 You can run the Python files directly. Optionally install the command-line entry points:
 
@@ -44,7 +55,6 @@ Example: four layers, approximately 40 Å wide and 40 Å long, with periodic cel
 ```bash
 mkdir -p cellulose_ethanol
 python build_cellulose_slab.py \
-  --cellulose-forge-directory /path/to/cellulose_functionalization \
   --allomorph I-beta \
   --face 1 1 0 \
   --layers 4 \
@@ -58,13 +68,13 @@ python build_cellulose_slab.py \
   --output cellulose_ethanol/slab_build
 ```
 
-Replace the checkout path with your installation. If needed, also pass `--uv /path/to/uv`, `--tleap-executable /path/to/tleap`, or `--parmed-python /path/to/python`.
+If needed, also pass `--cellulose-forge-executable /path/to/cellulose-forge`, `--tleap-executable /path/to/tleap`, or `--parmed-python /path/to/python`.
 
-The wrapper forwards `--output` to CelluloseForge. Confirm the output-path convention for your installed CelluloseForge version with `uv run --project /path/to/cellulose_functionalization cellulose-forge build --help`. The saved build report in this project records outputs named `structure.pdb`, `structure.gro`, and `system.top`; use the actual generated GRO and TOP paths in the next steps.
+The wrapper forwards `--output` to CelluloseForge. Confirm the output-path convention with `cellulose-forge build --help`. The saved build report in this project records outputs named `structure.pdb`, `structure.gro`, and `system.top`; use the actual generated GRO and TOP paths in the next steps.
 
 The commands below assume these are `cellulose_ethanol/slab_build/structure.gro` and `cellulose_ethanol/slab_build/system.top`. This intermediate slab-build directory keeps CelluloseForge outputs separate from the final combined `cellulose_ethanol/system.top`. Cellulose dimensions are rounded to fit the crystal lattice. Review the generated build report for realized dimensions, chain ordering, periodic connectivity, and restrained layers. The existing example has 28 chains, eight glucose units per chain, and 4,704 cellulose atoms.
 
-`--dry-run` prints the CelluloseForge command, but still requires a valid checkout and `uv` path.
+`--dry-run` prints the CelluloseForge command, but still requires `cellulose-forge` to be installed.
 
 ## 2. Parameterize the liquid
 
@@ -240,35 +250,9 @@ sbatch run_pure_ethanol.sbatch
 
 The job inserts the molecules into a 5.1 nm cubic starting box, verifies the atom count, minimizes, runs 1 ns of initial NPT equilibration, and then runs a separate 2 ns NPT sampling stage. Both NPT stages use isotropic C-rescale coupling at 1 bar and V-rescale temperature coupling at 298.15 K, with a 2 fs timestep and hydrogen-bond constraints. All three box lengths can relax together; fixed lateral dimensions are specific to the cellulose interface, not this bulk reference.
 
-At completion, `density.xvg` records the sampling-stage density versus time. `density_summary.txt` contains the GROMACS average, block-based error estimate, RMSD, and drift for that stage. Density is reported in kg/m³; divide by 1,000 to obtain g/cm³. `equilibration_observables.xvg` and `sampling_observables.xvg`, with their corresponding summary files, provide density, temperature, pressure, and volume for the two stages. The sampling-stage time axis starts at 1,000 ps and ends at 3,000 ps.
+At completion, `density.xvg` records the sampling-stage density versus time. `density_summary.txt` contains the GROMACS average, block-based error estimate, RMSD, and drift for that stage. Density is reported in kg/m³; divide by 1,000 to obtain g/cm³. `equilibration_observables.xvg` and `sampling_observables.xvg`, with their corresponding summary files, provide density, temperature, pressure, and volume for the two stages. The sampling-stage time axis starts at 1,000 ps and ends at 3,000 ps. These analysis files are generated by the job and are not tracked in the repository.
 
 These durations are initial choices, not an automatic convergence guarantee. Inspect density and volume traces and compare averages over successive time blocks. If they are still drifting, extend equilibration and exclude the transient period from the density estimate. Compare a stable bulk reference with the ethanol density plateau away from cellulose surfaces, using matching temperature, force field, and nonbonded settings. The model's density should be measured rather than forced to equal the initial packing target.
-
-## Interfacial density relative to the bulk liquid
-
-The ethanol profile over the final 1 ns of interface NVT (1,000–2,000 ps) is centered on the cellulose slab and keeps both interfaces visible. It uses 200 bins along Z and is not symmetrized. Each ethanol mass-density bin is divided by the pure-liquid mean over its final 1 ns (2,000–3,000 ps): **762.398 kg/m³**. A dashed horizontal line at **1** represents this simulated bulk density. The bulk reference remains preliminary because its density still showed some drift.
-
-Generate the GROMACS profile on the cluster:
-
-```bash
-cd cellulose_ethanol
-sbatch analyze_density.sbatch
-```
-
-Once that job finishes, plot from the project root using a Python environment with Matplotlib:
-
-```bash
-python plot_density_profile.py \
-  --profile cellulose_ethanol/density_z_last1ns.xvg \
-  --bulk-report cellulose_ethanol/pure_ethanol/last1ns_density_report.json \
-  --output-prefix cellulose_ethanol/normalized_density_last1ns \
-  --label Ethanol \
-  --window 'NVT: 1–2 ns'
-```
-
-Outputs are a PNG, PDF, and CSV containing Z, absolute liquid density, and normalized density. The profile is a time average over 201 saved frames (5 ps spacing), not a single snapshot or an average over independent replicas. For a less noisy spatial resolution, add `--bin-average 2` and use output prefix `cellulose_ethanol/normalized_density_last1ns_rebinned`. This combines adjacent bins into 100 bins (approximately 0.083 nm wide) and preserves the integrated mass; it adds no new sampling. The original 200-bin results remain available. Values above 1 indicate local enrichment relative to the pure-liquid reference; values below 1 indicate depletion. The present outer liquid regions (`abs(z) >= 2.5 nm`) average approximately **0.96 times bulk**, while the first adsorption peaks reach approximately **1.2 times bulk**. These profiles alone do not establish equilibration.
-
-GROMACS reports periodic-chain shift warnings during the analysis. An independent histogram of raw trajectory coordinates reproduced the liquid profile within 1.6 kg/m³ per bin, and integrating the profile recovered the expected total ethanol mass. The check and normalization details are recorded in `normalized_density_last1ns_report.json`.
 
 ## Extending equilibration and restarting production
 
@@ -286,38 +270,13 @@ sbatch extend_pure_ethanol.sbatch
 
 Both scripts use `gmx convert-tpr -extend` and checkpoint continuation to preserve the original NPT parameters. The interface continuation therefore retains the original scaled restraint reference, rather than replacing it at the start of the NPT extension. New NPT outputs use the `npt_extended` prefix and GROMACS part numbers; the original outputs remain intact. New interface NVT outputs use `nvt_production_extended`. Do not run multiple continuation jobs in the same directory at once.
 
-The extra durations do not guarantee equilibration. Review late-time density/volume for the pure liquid and Z/Pzz for the interface, along with profiles in successive time windows. The interface script advances automatically to NVT; treat that segment as production only after these checks support equilibration. Existing normalized profiles refer to the original runs and preliminary bulk density, and must be regenerated from the new results before interpreting the extended system.
-
-## Results after the extended runs
-
-Both continuations finished successfully: pure ethanol reached 8 ns total NPT, and the interface reached 2.5 ns restrained fixed-X/Y NPT followed by a fresh 2 ns restrained NVT segment.
-
-The final pure-liquid reference, averaged over 7–8 ns, is **0.761501 g/cm³**, with a GROMACS block error estimate of **0.000680 g/cm³** and fitted total density drift of **+0.000914 g/cm³** over that window. See `pure_ethanol/extended_last1ns_density_report.json`.
-
-Outer-interface ethanol density (`abs(z) >= 2.5 nm` relative to the cellulose center), evaluated with the actual liquid-region volume, is:
-
-| Time within new NVT segment | Mean density (g/cm³) |
-| --- | --- |
-| 0–0.5 ns | 0.74023 |
-| 0.5–1.0 ns | 0.73831 |
-| 1.0–1.5 ns | 0.73844 |
-| 1.5–2.0 ns | 0.74026 |
-
-The successive profiles overlap closely and do not show a sustained monotonic change. The final-1-ns outer density is approximately **0.73936 g/cm³**, or **0.971 times** the updated pure-liquid reference. Thus, the outer liquid remains about 3% less dense than the simulated bulk reference despite the longer runs; temporal stability alone does not explain or remove this difference. These are finite-trajectory diagnostics, not proof of complete equilibration.
-
-Updated plots in `cellulose_ethanol/`:
-
-- `normalized_density_extended_last1ns.png` and `.pdf`: final-1-ns profile normalized by the updated bulk density, with the reference line at 1.
-- `extended_density_window_comparison.png` and `.pdf`: profiles in successive 0.5 ns windows of the new NVT segment.
-- `nvt_extended_density_windows.json` and `.csv`: window averages and per-frame outer-region densities.
-
-`analyze_extended_density.sbatch` regenerates the GROMACS profiles. Time in these profile files is absolute (2.5–4.5 ns), whereas the comparison plot labels time elapsed within the new NVT segment (0–2 ns). The updated plots use 100 spatial bins formed by averaging adjacent pairs of the 200 GROMACS bins. Original-run plots are retained for comparison.
+The extra durations do not guarantee equilibration. Review late-time density/volume for the pure liquid and Z/Pzz for the interface, along with profiles in successive time windows. The interface script advances automatically to NVT; treat that segment as production only after these checks support equilibration.
 
 ## Larger liquid reservoir: 1,500 ethanol molecules per surface
 
 The larger-reservoir comparison contains **3,000 ethanol molecules total**, with 1,500 initially packed on each cellulose surface. It retains the original GLYCAM cellulose slab and the same GAFF2/AM1-BCC ethanol parameters, including the per-pair 1–4 scaling representation. The generated primary and secondary molecule ITPs were checked to be byte-identical to those of the original interface.
 
-All case files remain directly in `cellulose_ethanol/` and use `_3000` names, preserving the previous simulations. The initial box is approximately **4.1751 × 4.1520 × 19.5250 nm**, with an initial geometric liquid thickness of **8.69 nm per face**. Packing used the updated simulated pure-liquid reference of **0.761501 g/cm³** as an initial density target, not a constraint on the final NPT density. `interface_3000_build_report.json` records the construction checks, including 31,704 total atoms and 1,500 liquid molecules per face.
+All case files remain directly in `cellulose_ethanol/` and use `_3000` names, preserving the previous simulations. The initial box is approximately **4.1751 × 4.1520 × 19.5250 nm**, with an initial geometric liquid thickness of **8.69 nm per face**. Packing used the simulated pure-liquid density of **0.761501 g/cm³** (7–8 ns average of the extended pure-ethanol NPT run) as an initial density target, not a constraint on the final NPT density. `interface_3000_build_report.json` records the construction checks, including 31,704 total atoms and 1,500 liquid molecules per face.
 
 Packing command from the project root (activate an environment with Open Babel and Packmol, or provide their executable paths):
 
@@ -344,7 +303,11 @@ This job runs restrained steepest-descent minimization followed by **2.5 ns NPT*
 - Change SMILES, residue name, molecular charge, molecule count, and target packing density consistently for another liquid. This parameterizer specifically uses GAFF2/AM1-BCC; assess whether that model is suitable for the molecule and study.
 - For missing executables, activate the relevant environment or supply the scripts' executable-path options. Use `python SCRIPT.py --help` for all supported flags.
 - If ParmEd cannot be imported, run parameterization with the Python interpreter in your AmberTools/ParmEd environment.
-- If the cellulose builder cannot find CelluloseForge, supply its checkout path explicitly.
+- If the cellulose builder cannot find CelluloseForge, install the 1.0.0 release as above, or pass `--cellulose-forge-executable` with the path to `cellulose-forge`.
 - If packing fails, review liquid count, target density, tolerance, and retry settings.
 - If restraints are inactive, confirm that the topology contains `#ifdef POSRES_CELLULOSE` and that the processed MDP enables it.
 - If GROMACS reports an atom-order/count mismatch, check the coordinate/topology pair and consistent liquid atom/residue naming.
+
+## Licence
+
+This project is licensed under the GNU General Public License v3.0 or later (GPL-3.0-or-later), matching CelluloseForge. See [`LICENSE`](LICENSE).

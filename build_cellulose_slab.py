@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a dimension-driven cellulose slab with a local CelluloseForge checkout."""
+"""Build a dimension-driven cellulose slab with an installed CelluloseForge 1.0.0."""
 
 from __future__ import annotations
 
@@ -10,9 +10,8 @@ import sys
 from pathlib import Path
 
 
-VERSION = "0.1.0"
-DEFAULT_FORGE = Path(__file__).resolve().parents[1] / "cellulose_functionalization"
-DEFAULT_UV = shutil.which("uv") or str(Path.home() / ".local" / "bin" / "uv")
+VERSION = "0.2.0"
+DEFAULT_FORGE = "cellulose-forge"
 
 
 def cli() -> int:
@@ -31,8 +30,11 @@ def cli() -> int:
     parser.add_argument("--tleap-executable", type=Path)
     parser.add_argument("--parmed-python", type=Path)
     parser.add_argument("--output", required=True, type=Path)
-    parser.add_argument("--cellulose-forge-directory", type=Path, default=DEFAULT_FORGE)
-    parser.add_argument("--uv", type=Path, default=Path(DEFAULT_UV), help="path to the uv executable")
+    parser.add_argument(
+        "--cellulose-forge-executable",
+        default=DEFAULT_FORGE,
+        help="cellulose-forge command name or path (default: cellulose-forge on PATH)",
+    )
     parser.add_argument("--dry-run", action="store_true", help="print the CelluloseForge command only")
     args = parser.parse_args()
 
@@ -40,19 +42,15 @@ def cli() -> int:
         parser.error("--layers must be positive")
     if args.width <= 0 or args.length <= 0:
         parser.error("--width and --length must be positive")
-    forge = args.cellulose_forge_directory.resolve()
-    if not (forge / "pyproject.toml").is_file():
-        parser.error(f"CelluloseForge project not found at {forge}")
-    uv = args.uv.resolve()
-    if not uv.is_file():
-        parser.error(f"uv executable not found at {uv}")
+    forge = shutil.which(args.cellulose_forge_executable)
+    if forge is None:
+        parser.error(
+            f"CelluloseForge executable {args.cellulose_forge_executable!r} not found; "
+            "install CelluloseForge 1.0.0 or pass --cellulose-forge-executable"
+        )
 
     command = [
-        str(uv),
-        "run",
-        "--project",
-        str(forge),
-        "cellulose-forge",
+        forge,
         "build",
         "--allomorph",
         args.allomorph,
