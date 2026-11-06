@@ -31,6 +31,6 @@ dependencies:
       # Packmol package. The official Packmol project supplies binary wheels.
       - packmol==21.2.3
       # Cellulose slab builder used by build_cellulose_slab.py.
-      - "cellulose-forge @ git+https://github.com/askforarun/cellulose-forge.git@v1.0.0"
+      - "cellulose-forge @ git+https://github.com/askforarun/cellulose-forge.git@v1.1.1"
       # Install this checkout's four command-line entry points.
       - -e .

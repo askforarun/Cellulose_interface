@@ -16,7 +16,7 @@ Run commands from the `Cellulose_interface` project root.
 
 | File or directory | Purpose |
 | --- | --- |
-| `build_cellulose_slab.py` | Call the installed `cellulose-forge` command (CelluloseForge 1.1.0) to generate the slab and its topology |
+| `build_cellulose_slab.py` | Call the installed `cellulose-forge` command (CelluloseForge 1.1.1) to generate the slab and its topology |
 | `parameterize_molecule.py` | Generate GAFF2/AM1-BCC small-molecule parameters using AmberTools and ParmEd |
 | `pack_liquid_cellulose.py` | Use Packmol to place liquid on both sides of the cellulose slab |
 | `combine_gromacs_topologies.py` | Combine topologies and convert packed coordinates to GROMACS format |
@@ -27,7 +27,7 @@ Run commands from the `Cellulose_interface` project root.
 ## Requirements
 
 - Python 3.11 or newer.
-- [CelluloseForge 1.1.0](https://github.com/askforarun/cellulose-forge/releases/tag/v1.1.0) for building cellulose, providing the `cellulose-forge` command (see below).
+- [CelluloseForge 1.1.1](https://github.com/askforarun/cellulose-forge/releases/tag/v1.1.1) for building cellulose, providing the `cellulose-forge` command (see below).
 - AmberTools: `antechamber`, `parmchk2`, `tleap`, and the GLYCAM parameter files for the cellulose example.
 - ParmEd importable by the Python interpreter used for parameterization.
 - Open Babel (`obabel`) and Packmol (`packmol`) on PATH. Packmol must support the `pbc` input keyword.
@@ -37,7 +37,7 @@ Run commands from the `Cellulose_interface` project root.
 
 The repository includes a complete `environment.yml` containing AmberTools,
 ParmEd, Open Babel, periodic-capable Packmol, GROMACS, analysis libraries,
-CelluloseForge 1.0.0, and this project's command-line tools:
+CelluloseForge 1.1.1, and this project's command-line tools:
 
 ```bash
 conda env create --file environment.yml
@@ -75,12 +75,12 @@ fallback when PyPI does not provide a prebuilt Packmol wheel for the platform.
 
 Activate your AmberTools environment before parameterization. Installing this project's Python package does not install CelluloseForge, the external simulation tools, or force fields.
 
-### Install CelluloseForge 1.1.0
+### Install CelluloseForge 1.1.1
 
-CelluloseForge is not yet on PyPI. Install the tagged 1.1.0 release from GitHub into the environment you use for this workflow:
+CelluloseForge is not yet on PyPI. Install the tagged 1.1.1 release from GitHub into the environment you use for this workflow:
 
 ```bash
-python -m pip install "cellulose-forge @ git+https://github.com/askforarun/cellulose-forge.git@v1.1.0"
+python -m pip install "cellulose-forge @ git+https://github.com/askforarun/cellulose-forge.git@v1.1.1"
 cellulose-forge --help
 ```
 
