@@ -30,7 +30,7 @@ export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-32}"
 GMX="${GMX:-gmx_mpi}"
 command -v "$GMX" >/dev/null
 # A new case: existing 1000-molecule inputs and trajectories remain unchanged.
-for input in interface_3000.gro system_3000.top forcefield_3000.itp primary_3000.itp secondary_3000.itp; do
+for input in interface_3000.gro system_3000.top forcefield_3000.itp slab_3000.itp liquid_3000.itp; do
     [[ -s "$input" ]] || { echo "Missing input: $input" >&2; exit 1; }
 done
 python3 - <<'CHECK'

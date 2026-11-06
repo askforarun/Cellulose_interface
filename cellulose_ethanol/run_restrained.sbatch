@@ -31,7 +31,7 @@ set -u
 export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-32}"
 GMX="${GMX:-gmx_mpi}"
 command -v "$GMX" >/dev/null
-for input in interface.gro system.top forcefield.itp primary.itp secondary.itp em.mdp npt.mdp nvt_production.mdp; do
+for input in interface.gro system.top forcefield.itp slab.itp liquid.itp em.mdp npt.mdp nvt_production.mdp; do
     [[ -s "$input" ]] || { echo "Missing input: $PWD/$input; submit from cellulose_ethanol/" >&2; exit 1; }
 done
 

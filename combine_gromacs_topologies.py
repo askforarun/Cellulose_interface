@@ -10,7 +10,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-VERSION = "0.4.0"
+VERSION = "0.5.0"
 SECTION = re.compile(r"^\s*\[\s*([^]]+?)\s*]\s*(?:;.*)?$")
 
 
@@ -98,7 +98,7 @@ def use_combined_coordinates(
     first_secondary = min(secondary_indices)
     if any(atom.resname != secondary_resname for atom in atoms[first_secondary:]):
         raise ValueError(
-            "combined coordinates must list all primary atoms before secondary molecules"
+            "combined coordinates must list all slab atoms before liquid molecules"
         )
     secondary_count = residue_count(atoms[first_secondary:])
     write_gro(atoms, box, output)
@@ -118,7 +118,7 @@ def assemble_coordinates(
     axis = "xyz".index(axis_name)
     lateral = [index for index in range(3) if index != axis]
     if any(abs(primary_box[index] - secondary_box[index]) > 1e-4 for index in lateral):
-        raise ValueError("primary and secondary boxes must have matching lateral dimensions")
+        raise ValueError("slab and liquid boxes must have matching lateral dimensions")
     # Preserve whole molecules. Atom-wise wrapping can split bonded molecules across
     # a periodic boundary and creates very long excluded/bonded distances in grompp.
     primary_xyz = [list(atom.xyz) for atom in primary_atoms]
@@ -138,7 +138,7 @@ def assemble_coordinates(
         shift = primary_extent + gap - secondary_min
         for xyz in secondary_xyz:
             xyz[axis] += shift
-    elif layout == "centered-primary":
+    elif layout == "centered-slab":
         # Put the slab in the middle of the box. Place the liquid after its upper
         # surface and wrap whole residues through the periodic boundary. This
         # writes an explicit liquid | slab | liquid view without splitting any
@@ -328,7 +328,7 @@ def explicit_secondary_pairs(
     if not pair_sections:
         return block
     if len(pair_sections) != 1:
-        raise ValueError(f"expected at most one secondary [pairs] section, found {len(pair_sections)}")
+        raise ValueError(f"expected at most one liquid [pairs] section, found {len(pair_sections)}")
     start, end = pair_sections[0]
     replacement = [block[start], "; ai aj funct fudgeQQ qi qj sigma14 epsilon14"]
     for line in block[start + 1 : end]:
@@ -337,7 +337,7 @@ def explicit_secondary_pairs(
             continue
         fields = value.split()
         if len(fields) != 3 or fields[2] != "1":
-            raise ValueError(f"unsupported secondary pair row: {line}")
+            raise ValueError(f"unsupported liquid pair row: {line}")
         first, second = int(fields[0]), int(fields[1])
         sigma_i, epsilon_i = type_parameters[atom_types[first]]
         sigma_j, epsilon_j = type_parameters[atom_types[second]]
@@ -369,16 +369,16 @@ def molecule_composition(text: str) -> list[tuple[str, int]]:
 def main() -> int:
     parser = argparse.ArgumentParser(prog="combine-gromacs-topologies")
     parser.add_argument("--version", action="version", version=f"%(prog)s {VERSION}")
-    parser.add_argument("--primary", required=True, type=Path)
-    parser.add_argument("--secondary", required=True, type=Path)
-    parser.add_argument("--primary-coordinates", type=Path)
-    parser.add_argument("--secondary-coordinates", type=Path)
+    parser.add_argument("--slab", required=True, type=Path)
+    parser.add_argument("--liquid", required=True, type=Path)
+    parser.add_argument("--slab-coordinates", type=Path)
+    parser.add_argument("--liquid-coordinates", type=Path)
     parser.add_argument(
         "--combined-coordinates",
         type=Path,
         help=(
-            "preassembled coordinates with primary atoms first; copy to GRO and "
-            "infer the secondary molecule count"
+            "preassembled coordinates with slab atoms first; copy to GRO and "
+            "infer the liquid molecule count"
         ),
     )
     parser.add_argument("--output-directory", required=True, type=Path)
@@ -392,11 +392,11 @@ def main() -> int:
     )
     parser.add_argument(
         "--coordinate-layout",
-        choices=("centered-primary", "stacked"),
-        default="centered-primary",
+        choices=("centered-slab", "stacked"),
+        default="centered-slab",
         help=(
-            "coordinate arrangement: center the primary and put secondary liquid "
-            "on both sides (default), or place the two boxes sequentially"
+            "coordinate arrangement: center the slab and put liquid on both sides "
+            "(default), or place the two boxes sequentially"
         ),
     )
     parser.add_argument("--system-name", default="Combined molecular system")
@@ -404,19 +404,19 @@ def main() -> int:
     if args.interface_gap < 0:
         parser.error("--interface-gap cannot be negative")
     if args.combined_coordinates:
-        if args.primary_coordinates or args.secondary_coordinates:
+        if args.slab_coordinates or args.liquid_coordinates:
             parser.error(
-                "--combined-coordinates cannot be used with --primary-coordinates "
-                "or --secondary-coordinates"
+                "--combined-coordinates cannot be used with --slab-coordinates "
+                "or --liquid-coordinates"
             )
-    elif not (args.primary_coordinates and args.secondary_coordinates):
+    elif not (args.slab_coordinates and args.liquid_coordinates):
         parser.error(
-            "provide --combined-coordinates or both --primary-coordinates and "
-            "--secondary-coordinates"
+            "provide --combined-coordinates or both --slab-coordinates and "
+            "--liquid-coordinates"
         )
 
-    primary_text = args.primary.read_text()
-    secondary_text = args.secondary.read_text()
+    primary_text = args.slab.read_text()
+    secondary_text = args.liquid.read_text()
     primary_defaults = defaults(primary_text)
     secondary_defaults = defaults(secondary_text)
     if primary_defaults.nbfunc != secondary_defaults.nbfunc:
@@ -457,8 +457,8 @@ def main() -> int:
         )
     else:
         primary_atom_count, secondary_count, combined_box = assemble_coordinates(
-            args.primary_coordinates,
-            args.secondary_coordinates,
+            args.slab_coordinates,
+            args.liquid_coordinates,
             coordinate_output,
             args.axis,
             args.interface_gap,
@@ -477,12 +477,12 @@ def main() -> int:
         + "\n".join(primary_type_lines + secondary_unique)
         + "\n"
     )
-    (output / "primary.itp").write_text(
+    (output / "slab.itp").write_text(
         "\n\n".join("\n".join(block).rstrip() for block in primary_blocks) + "\n"
     )
-    (output / "secondary.itp").write_text("\n".join(secondary_block).rstrip() + "\n")
+    (output / "liquid.itp").write_text("\n".join(secondary_block).rstrip() + "\n")
     (output / "system.top").write_text(
-        '#include "forcefield.itp"\n#include "primary.itp"\n#include "secondary.itp"\n\n'
+        '#include "forcefield.itp"\n#include "slab.itp"\n#include "liquid.itp"\n\n'
         f"[ system ]\n{args.system_name}\n\n[ molecules ]\n"
         + "".join(f"{name} {count}\n" for name, count in primary_composition)
         +
@@ -490,18 +490,18 @@ def main() -> int:
     )
     print(f"Wrote combined topology to {output}")
     print(
-        f"Primary scaling: LJ={primary_defaults.fudge_lj:g}, QQ={primary_defaults.fudge_qq:g}"
+        f"Slab scaling: LJ={primary_defaults.fudge_lj:g}, QQ={primary_defaults.fudge_qq:g}"
     )
     print(
-        "Secondary explicit-pair scaling: "
+        "Liquid explicit-pair scaling: "
         f"LJ={secondary_defaults.fudge_lj:g}, QQ={secondary_defaults.fudge_qq:g}"
     )
     print(
-        f"Coordinates: {primary_atom_count} primary atoms, {secondary_count} secondary "
+        f"Coordinates: {primary_atom_count} slab atoms, {secondary_count} liquid "
         f"residues; box={' x '.join(f'{value:.5f}' for value in combined_box)} nm"
     )
     if args.combined_coordinates:
-        print("Coordinates: using preassembled primary-liquid interface")
+        print("Coordinates: using preassembled slab-liquid interface")
     else:
         print(f"Configured separation at each periodic interface: {args.interface_gap:.5f} nm")
         print(f"Coordinate layout: {args.coordinate_layout}")

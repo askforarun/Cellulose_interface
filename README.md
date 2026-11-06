@@ -145,7 +145,7 @@ python parameterize_molecule.py \
 
 This generates `ethanol.pdb`, `.mol2`, `.frcmod`, `.prmtop`, `.inpcrd`, `.top`, `.gro`, `.itp`, and `ethanol_atomtypes.itp` in `cellulose_ethanol/`.
 
-Use `ethanol.top` as the secondary topology when combining systems. The `.itp` molecule file separately encodes explicit type-2 1–4 interactions. The script uses GAFF2 atom types and AM1-BCC charges.
+Use `ethanol.top` as the liquid topology when combining systems. The `.itp` molecule file separately encodes explicit type-2 1–4 interactions. The script uses GAFF2 atom types and AM1-BCC charges.
 
 ### Rigid water models
 
@@ -185,8 +185,8 @@ Then combine it using the generated standalone water topology:
 
 ```bash
 python combine_gromacs_topologies.py \
-  --primary cellulose_build/system.top \
-  --secondary cellulose_water/water_tip4pew.top \
+  --slab cellulose_build/system.top \
+  --liquid cellulose_water/water_tip4pew.top \
   --combined-coordinates cellulose_water/interface.pdb \
   --output-directory cellulose_water \
   --system-name 'Cellulose I-beta TIP4P-Ew water interface'
@@ -224,8 +224,8 @@ Useful options include `--tolerance-angstrom 2.0`, `--max-attempts 5`, and `--z-
 
 ```bash
 python combine_gromacs_topologies.py \
-  --primary cellulose_build/system.top \
-  --secondary cellulose_ethanol/ethanol.top \
+  --slab cellulose_build/system.top \
+  --liquid cellulose_ethanol/ethanol.top \
   --combined-coordinates cellulose_ethanol/interface.pdb \
   --output-directory cellulose_ethanol \
   --system-name 'Cellulose I-beta ethanol interface'
@@ -238,13 +238,19 @@ cellulose_ethanol/
 ├── interface.gro
 ├── system.top
 ├── forcefield.itp
-├── primary.itp
-└── secondary.itp
+├── slab.itp
+└── liquid.itp
 ```
 
-Keep these five files together. The packed coordinates must list cellulose atoms first, followed by liquid molecules, with a liquid residue name matching the secondary topology. The packing script produces that ordering. Only orthorhombic boxes are supported by this workflow.
+Keep these five files together. The packed coordinates must list cellulose atoms first, followed by liquid molecules, with a liquid residue name matching the liquid topology. The packing script produces that ordering. Only orthorhombic boxes are supported by this workflow.
 
-Use the GLYCAM cellulose topology as `--primary`. The combiner retains its global 1–4 scaling (`fudgeLJ = 1`, `fudgeQQ = 1`) and writes the GAFF2 secondary molecule's scaling explicitly into its pairs. This supports the GLYCAM/GAFF2 combination used here. It requires matching nonbonded functions and combination rules, and rejects conflicting atom-type Lennard-Jones parameters. Inspect any warnings from GROMACS preprocessing rather than bypassing them automatically.
+Use the GLYCAM cellulose topology as `--slab` and the molecular-liquid or
+water topology as `--liquid`. The combiner retains the slab's global 1–4
+scaling (`fudgeLJ = 1`, `fudgeQQ = 1`) and writes the GAFF2 liquid molecule's
+scaling explicitly into its pairs. This supports the GLYCAM/GAFF2 combination
+used here. It requires matching nonbonded functions and combination rules, and
+rejects conflicting atom-type Lennard-Jones parameters. Inspect any warnings
+from GROMACS preprocessing rather than bypassing them automatically.
 
 The provided example already has these five files directly in `cellulose_ethanol/`. Rebuilding with the commands above replaces the final interface inputs there; run construction only when no simulation is using those files.
 
@@ -263,22 +269,22 @@ GROMACS uses one set of global 1–4 scaling factors for the combined system, bu
 
 `combine_gromacs_topologies.py` handles this automatically:
 
-1. Retain the primary topology's global defaults, including GLYCAM's unit scaling.
-2. Read the secondary topology's native scaling factors, atom charges, and atom-type Lennard-Jones parameters.
-3. Convert each secondary type-1 `[ pairs ]` entry into an explicit type-2 entry with fields `ai aj funct fudgeQQ qi qj sigma14 epsilon14`.
+1. Retain the slab topology's global defaults, including GLYCAM's unit scaling.
+2. Read the liquid topology's native scaling factors, atom charges, and atom-type Lennard-Jones parameters.
+3. Convert each liquid type-1 `[ pairs ]` entry into an explicit type-2 entry with fields `ai aj funct fudgeQQ qi qj sigma14 epsilon14`.
 4. Encode electrostatic scaling in the pair's `fudgeQQ` field and Lennard-Jones scaling in `epsilon14`.
 
 For the supported combination rule 2, the converter uses:
 
 ```text
 sigma14   = (sigma_i + sigma_j) / 2
-epsilon14 = sqrt(epsilon_i * epsilon_j) * secondary_fudgeLJ
-pair_fudgeQQ = secondary_fudgeQQ
+epsilon14 = sqrt(epsilon_i * epsilon_j) * liquid_fudgeLJ
+pair_fudgeQQ = liquid_fudgeQQ
 ```
 
-Although the global scaling factors are set to 1.0 for GLYCAM, the liquid retains its original force-field-specific 1–4 scaling because those factors are specified directly for each liquid 1–4 pair. These per-pair scaling settings apply to intramolecular 1–4 interactions; it does not introduce a separate scaling factor for cellulose–liquid interactions. `parameterize_molecule.py` also writes an explicit-pair molecule ITP, but the combiner should receive the native secondary `.top` so that it can read its original defaults and type-1 pairs. Do not apply the conversion twice.
+Although the global scaling factors are set to 1.0 for GLYCAM, the liquid retains its original force-field-specific 1–4 scaling because those factors are specified directly for each liquid 1–4 pair. These per-pair scaling settings apply to intramolecular 1–4 interactions; it does not introduce a separate scaling factor for cellulose–liquid interactions. `parameterize_molecule.py` also writes an explicit-pair molecule ITP, but the combiner should receive the native liquid `.top` so that it can read its original defaults and type-1 pairs. Do not apply the conversion twice.
 
-The current converter supports combination rule 2 and ordinary three-field type-1 secondary pair rows. It rejects other pair formats rather than assuming their meaning. Review the source force-field conventions when introducing another liquid or topology source.
+The current converter supports combination rule 2 and ordinary three-field type-1 liquid pair rows. It rejects other pair formats rather than assuming their meaning. Review the source force-field conventions when introducing another liquid or topology source.
 
 ### Checking that the original 1–4 energies are preserved
 
@@ -380,7 +386,7 @@ The extra durations do not guarantee equilibration. Review late-time density/vol
 
 ## Larger liquid reservoir: 1,500 ethanol molecules per surface
 
-The larger-reservoir comparison contains **3,000 ethanol molecules total**, with 1,500 initially packed on each cellulose surface. It retains the original GLYCAM cellulose slab and the same GAFF2/AM1-BCC ethanol parameters, including the per-pair 1–4 scaling representation. The generated primary and secondary molecule ITPs were checked to be byte-identical to those of the original interface.
+The larger-reservoir comparison contains **3,000 ethanol molecules total**, with 1,500 initially packed on each cellulose surface. It retains the original GLYCAM cellulose slab and the same GAFF2/AM1-BCC ethanol parameters, including the per-pair 1–4 scaling representation. The generated slab and liquid molecule ITPs were checked to be byte-identical to those of the original interface.
 
 All case files remain directly in `cellulose_ethanol/` and use `_3000` names, preserving the previous simulations. The initial box is approximately **4.1751 × 4.1520 × 19.5250 nm**, with an initial geometric liquid thickness of **8.69 nm per face**. Packing used the simulated pure-liquid density of **0.761501 g/cm³** (7–8 ns average of the extended pure-ethanol NPT run) as an initial density target, not a constraint on the final NPT density. `interface_3000_build_report.json` records the construction checks, including 31,704 total atoms and 1,500 liquid molecules per face.
 
@@ -395,7 +401,7 @@ python pack_liquid_cellulose.py \
   --output cellulose_ethanol/interface_3000.pdb
 ```
 
-The assembled starting files are `interface_3000.gro`, `system_3000.top`, `forcefield_3000.itp`, `primary_3000.itp`, and `secondary_3000.itp`. The combined topology uses the same cellulose molecule counts as before and `ETO 3000`; its include paths refer to the case-specific ITP filenames.
+The assembled starting files are `interface_3000.gro`, `system_3000.top`, `forcefield_3000.itp`, `slab_3000.itp`, and `liquid_3000.itp`. The combined topology uses the same cellulose molecule counts as before and `ETO 3000`; its include paths refer to the case-specific ITP filenames.
 
 ```bash
 cd cellulose_ethanol

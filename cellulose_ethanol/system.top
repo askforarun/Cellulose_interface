@@ -1,6 +1,6 @@
 #include "forcefield.itp"
-#include "primary.itp"
-#include "secondary.itp"
+#include "slab.itp"
+#include "liquid.itp"
 
 [ system ]
 Cellulose I-beta ethanol interface
