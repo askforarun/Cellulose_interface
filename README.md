@@ -92,7 +92,9 @@ You can run the Python files directly. Optionally install the command-line entry
 python -m pip install -e .
 ```
 
-The installed names are `build-cellulose-slab`, `parameterize-molecule`, `pack-liquid-cellulose`, and `combine-gromacs-topologies`.
+The installed names are `build-cellulose-slab`, `parameterize-molecule`,
+`prepare-water-model`, `pack-liquid-cellulose`, and
+`combine-gromacs-topologies`.
 
 ## 1. Build the cellulose slab
 
@@ -139,6 +141,58 @@ This generates `ethanol.pdb`, `.mol2`, `.frcmod`, `.prmtop`, `.inpcrd`, `.top`, 
 
 Use `ethanol.top` as the secondary topology when combining systems. The `.itp` molecule file separately encodes explicit type-2 1–4 interactions. The script uses GAFF2 atom types and AM1-BCC charges.
 
+### Rigid water models
+
+Water must not be parameterized from the SMILES `O`. Use a model-specific
+geometry, charges, Lennard-Jones parameters, constraints, and virtual sites.
+The workflow provides these AMBER-family GROMACS presets:
+
+- `spc`
+- `spce`
+- `tip3p`
+- `tip4p`
+- `tip4pew`
+- `tip5p`
+
+Prepare the chosen topology and inspectable single-water template, for example:
+
+```bash
+python prepare_water_model.py \
+  --model tip4pew \
+  --output-directory cellulose_water
+```
+
+This writes `water_tip4pew.top`, `water_tip4pew.pdb`,
+`water_tip4pew.itp`, and `water_tip4pew_atomtypes.itp`. Pack the same model
+on both cellulose surfaces without Open Babel:
+
+```bash
+python pack_liquid_cellulose.py \
+  --cellulose-coordinates cellulose_ethanol/slab_build/structure.gro \
+  --water-model tip4pew \
+  --molecules 3000 \
+  --density 0.997 \
+  --output cellulose_water/interface.pdb
+```
+
+Then combine it using the generated standalone water topology:
+
+```bash
+python combine_gromacs_topologies.py \
+  --primary cellulose_ethanol/slab_build/system.top \
+  --secondary cellulose_water/water_tip4pew.top \
+  --combined-coordinates cellulose_water/interface.pdb \
+  --output-directory cellulose_water \
+  --system-name 'Cellulose I-beta TIP4P-Ew water interface'
+```
+
+The model definitions follow the AMBER-family files distributed with GROMACS.
+TIP4P, TIP4P-Ew, and TIP5P include their required massless virtual sites. These
+presets are fixed-charge rigid models; they do not imply support for arbitrary
+polarizable or many-body water models. The density is still a user-selected
+initial packing target and should be appropriate for the model, temperature,
+and pressure being simulated.
+
 ## 3. Pack liquid around cellulose
 
 ```bash
@@ -158,7 +212,7 @@ The script retains the cellulose X/Y box lengths, centers the slab along Z, and 
 
 The initial Z length is calculated from the liquid mass, target density, lateral area, and slab thickness. Failed packing attempts increase the total Z dimension; the resulting initial liquid density can therefore be lower than the requested target. Packing density is an initial construction parameter, not a measurement of equilibrated bulk density.
 
-Useful options include `--tolerance-angstrom 2.0`, `--max-attempts 5`, and `--z-growth-factor 1.05`. `--dry-run` prints the initial box calculation without packing, but still requires Open Babel to determine molecular mass.
+Useful options include `--tolerance-angstrom 2.0`, `--max-attempts 5`, and `--z-growth-factor 1.05`. `--dry-run` prints the initial box calculation without packing. Open Babel is required for SMILES liquids, but not for a `--water-model` preset.
 
 ## 4. Assemble the combined GROMACS system
 

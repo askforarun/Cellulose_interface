@@ -325,8 +325,10 @@ def explicit_secondary_pairs(
     output = block.copy()
     text = "\n".join(block)
     pair_sections = [(start, end) for name, start, end in sections(text) if name == "pairs"]
+    if not pair_sections:
+        return block
     if len(pair_sections) != 1:
-        raise ValueError(f"expected one secondary [pairs] section, found {len(pair_sections)}")
+        raise ValueError(f"expected at most one secondary [pairs] section, found {len(pair_sections)}")
     start, end = pair_sections[0]
     replacement = [block[start], "; ai aj funct fudgeQQ qi qj sigma14 epsilon14"]
     for line in block[start + 1 : end]:

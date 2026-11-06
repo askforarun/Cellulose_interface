@@ -12,9 +12,10 @@ from collections import defaultdict
 from pathlib import Path
 
 from combine_gromacs_topologies import CoordinateAtom, read_coordinates
+from water_models import MODELS, WATER_MOLAR_MASS, write_water_pdb
 
 AVOGADRO_VOLUME_FACTOR = 602.214076  # molecules nm^-3 from mol cm^-3
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 
 
 def positive_float(value: str) -> float:
@@ -136,8 +137,18 @@ def parser() -> argparse.ArgumentParser:
     )
     result.add_argument("--version", action="version", version=f"%(prog)s {VERSION}")
     result.add_argument("--cellulose-coordinates", required=True, type=Path)
-    result.add_argument("--smiles", required=True, help='liquid SMILES, e.g. "CCO"')
-    result.add_argument("--residue-name", type=residue_name, default="MOL")
+    liquid = result.add_mutually_exclusive_group(required=True)
+    liquid.add_argument("--smiles", help='molecular-liquid SMILES, e.g. "CCO"')
+    liquid.add_argument(
+        "--water-model",
+        choices=tuple(MODELS),
+        help="rigid water preset (uses model-specific geometry and virtual sites)",
+    )
+    result.add_argument(
+        "--residue-name",
+        type=residue_name,
+        help="molecular-liquid residue name (default: MOL); water presets use SOL",
+    )
     result.add_argument("--molecules", required=True, type=positive_int)
     result.add_argument("--density", required=True, type=positive_float, help="g/cm^3")
     result.add_argument("--output", type=Path, default=Path("interface.pdb"))
@@ -160,7 +171,16 @@ def main() -> int:
             "--molecules must be even so the two cellulose surfaces receive equal counts"
         )
     cellulose_atoms, cellulose_box = read_coordinates(args.cellulose_coordinates)
-    mass = molar_mass(args.smiles, args.obabel)
+    if args.water_model:
+        mass = WATER_MOLAR_MASS
+        liquid_name = args.water_model.upper()
+        residue = "SOL"
+        if args.residue_name and args.residue_name != residue:
+            raise ValueError("water presets require --residue-name SOL")
+    else:
+        mass = molar_mass(args.smiles, args.obabel)
+        liquid_name = args.smiles
+        residue = args.residue_name or "MOL"
     slab_z_min = min(atom.xyz[2] for atom in cellulose_atoms)
     slab_z_max = max(atom.xyz[2] for atom in cellulose_atoms)
     slab_thickness = slab_z_max - slab_z_min
@@ -175,6 +195,7 @@ def main() -> int:
     print(f"Target liquid density: {args.density:.6f} g/cm^3 ({args.molecules} molecules)")
     print(f"Molecules per side:    {args.molecules // 2}")
     print(f"Liquid molar mass:     {mass:.6f} g/mol")
+    print(f"Liquid definition:     {liquid_name}")
     if args.dry_run:
         return 0
 
@@ -186,19 +207,22 @@ def main() -> int:
         temporary = Path(temporary_name)
         centered_cellulose = temporary / "cellulose_centered.pdb"
         liquid_template = temporary / "liquid.pdb"
-        subprocess.run(
-            [
-                args.obabel,
-                f"-:{args.smiles}",
-                "--gen3d",
-                "-h",
-                "-opdb",
-                "-O",
-                str(liquid_template),
-            ],
-            check=True,
-        )
-        normalize_template_names(liquid_template, args.residue_name)
+        if args.water_model:
+            write_water_pdb(args.water_model, liquid_template)
+        else:
+            subprocess.run(
+                [
+                    args.obabel,
+                    f"-:{args.smiles}",
+                    "--gen3d",
+                    "-h",
+                    "-opdb",
+                    "-O",
+                    str(liquid_template),
+                ],
+                check=True,
+            )
+            normalize_template_names(liquid_template, residue)
         for attempt in range(1, args.max_attempts + 1):
             final_box = [cellulose_box[0], cellulose_box[1], final_z]
             write_centered_cellulose(cellulose_atoms, cellulose_box, final_z, centered_cellulose)
