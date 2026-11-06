@@ -1,5 +1,11 @@
 # Cellulose–liquid interface workflow
 
+<p align="center">
+  <img src="cellulose_ethanol/vmdscene.png" width="600" alt="Symmetric ethanol–cellulose–ethanol simulation box">
+  <br>
+  <em>Four-layer cellulose Iβ slab (centre) interfaced with ethanol on both sides.</em>
+</p>
+
 Build a crystalline cellulose slab with **GLYCAM**, parameterize a small liquid molecule, pack liquid on both surfaces, and prepare a combined GROMACS system. The example below uses cellulose I-beta (110) and ethanol.
 
 The force-field assignment for this project is **GLYCAM06j-1 for cellulose** (`leaprc.GLYCAM_06j-1`) and **GAFF2/AM1-BCC for ethanol**. The cellulose builder defaults to `glycam`, and the build command below explicitly selects it. The saved `cellulose_ethanol/cellulose_build_report.json` records GLYCAM for the provided cellulose structure. It was produced by the CelluloseForge development build that became 1.1.0; because it predates the version bump it reports `1.0.0`, but it already uses the 1.1.0 slab frame (surface normal along `-z`) and heavy-atom-only restraint selection. The liquid parameterization script generates GAFF2 parameters; it does not parameterize cellulose.
