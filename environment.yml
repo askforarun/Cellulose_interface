@@ -1,0 +1,36 @@
+name: cellulose-interface
+
+channels:
+  - conda-forge
+
+dependencies:
+  # Python 3.12 is supported by the pinned AmberTools release and this project.
+  - python=3.12
+  - pip>=24
+  - setuptools>=68
+  - git
+  # Fallback build toolchain when PyPI has no Packmol wheel for the platform.
+  - fortran-compiler
+  - cmake>=3.20
+  - make
+
+  # Molecular construction and force-field parameterization.
+  - ambertools=25.3
+  - parmed>=4.3,<5
+  - openbabel>=3.1.1,<4
+
+  # Preprocessing, validation, simulation, and trajectory analysis.
+  - gromacs>=2024,<2027
+  - numpy>=1.26
+  - scipy>=1.12
+  - pandas>=2.2
+  - matplotlib-base>=3.8
+
+  - pip:
+      # The conda-forge AmberTools recipe intentionally conflicts with its
+      # Packmol package. The official Packmol project supplies binary wheels.
+      - packmol==21.2.3
+      # Cellulose slab builder used by build_cellulose_slab.py.
+      - "cellulose-forge @ git+https://github.com/askforarun/cellulose-forge.git@v1.0.0"
+      # Install this checkout's four command-line entry points.
+      - -e .

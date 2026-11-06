@@ -27,6 +27,46 @@ Run commands from the `Cellulose_interface` project root.
 - Open Babel (`obabel`) and Packmol (`packmol`) on PATH. Packmol must support the `pbc` input keyword.
 - GROMACS for preprocessing and simulation; Slurm for the supplied batch script.
 
+### Recommended Conda installation
+
+The repository includes a complete `environment.yml` containing AmberTools,
+ParmEd, Open Babel, periodic-capable Packmol, GROMACS, analysis libraries,
+CelluloseForge 1.0.0, and this project's command-line tools:
+
+```bash
+conda env create --file environment.yml
+conda activate cellulose-interface
+```
+
+To use a different environment name without editing the file:
+
+```bash
+conda env create --name MY_ENVIRONMENT --file environment.yml
+conda activate MY_ENVIRONMENT
+```
+
+Verify the required commands after installation:
+
+```bash
+python --version
+cellulose-forge --version
+antechamber -h >/dev/null
+parmchk2 -h >/dev/null
+tleap -h >/dev/null
+obabel -V
+packmol --version
+gmx --version
+```
+
+The supplied Slurm scripts use a cluster-provided `gmx_mpi` module and Slurm;
+those site-specific tools are intentionally not installed by this local Conda
+environment.
+
+Packmol is installed from its official PyPI distribution because the
+conda-forge AmberTools package intentionally conflicts with conda-forge's
+Packmol package. The environment includes a Fortran build toolchain as a
+fallback when PyPI does not provide a prebuilt Packmol wheel for the platform.
+
 Activate your AmberTools environment before parameterization. Installing this project's Python package does not install CelluloseForge, the external simulation tools, or force fields.
 
 ### Install CelluloseForge 1.1.0
