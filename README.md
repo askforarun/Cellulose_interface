@@ -101,7 +101,7 @@ The installed names are `build-cellulose-slab`, `parameterize-molecule`,
 Example: four layers, approximately 40 Å wide and 40 Å long, with periodic cellulose chains and restraints on layers 2 and 3.
 
 ```bash
-mkdir -p cellulose_ethanol
+mkdir -p cellulose_build
 python build_cellulose_slab.py \
   --allomorph I-beta \
   --face 1 1 0 \
@@ -113,14 +113,20 @@ python build_cellulose_slab.py \
   --force-field glycam \
   --restrain-layers 2 3 \
   --restraint-force 1000 1000 1000 \
-  --output cellulose_ethanol/slab_build
+  --output cellulose_build
 ```
 
 If needed, also pass `--cellulose-forge-executable /path/to/cellulose-forge`, `--tleap-executable /path/to/tleap`, or `--parmed-python /path/to/python`.
 
 The wrapper forwards `--output` to CelluloseForge. Confirm the output-path convention with `cellulose-forge build --help`. The saved build report in this project records outputs named `structure.pdb`, `structure.gro`, and `system.top`; use the actual generated GRO and TOP paths in the next steps.
 
-The commands below assume these are `cellulose_ethanol/slab_build/structure.gro` and `cellulose_ethanol/slab_build/system.top`. This intermediate slab-build directory keeps CelluloseForge outputs separate from the final combined `cellulose_ethanol/system.top`. Cellulose dimensions are rounded to fit the crystal lattice. Review the generated build report for realized dimensions, chain ordering, periodic connectivity, and restrained layers. The existing example has 28 chains, eight glucose units per chain, and 4,704 cellulose atoms.
+The commands below assume these are `cellulose_build/structure.gro` and
+`cellulose_build/system.top`. This liquid-independent build directory can be
+reused for ethanol, water, or another compatible liquid. Cellulose dimensions
+are rounded to fit the crystal lattice. Review the generated build report for
+realized dimensions, chain ordering, periodic connectivity, and restrained
+layers. The existing example has 28 chains, eight glucose units per chain, and
+4,704 cellulose atoms.
 
 `--dry-run` prints the CelluloseForge command, but still requires `cellulose-forge` to be installed.
 
@@ -168,7 +174,7 @@ on both cellulose surfaces without Open Babel:
 
 ```bash
 python pack_liquid_cellulose.py \
-  --cellulose-coordinates cellulose_ethanol/slab_build/structure.gro \
+  --cellulose-coordinates cellulose_build/structure.gro \
   --water-model tip4pew \
   --molecules 3000 \
   --density 0.997 \
@@ -179,7 +185,7 @@ Then combine it using the generated standalone water topology:
 
 ```bash
 python combine_gromacs_topologies.py \
-  --primary cellulose_ethanol/slab_build/system.top \
+  --primary cellulose_build/system.top \
   --secondary cellulose_water/water_tip4pew.top \
   --combined-coordinates cellulose_water/interface.pdb \
   --output-directory cellulose_water \
@@ -197,7 +203,7 @@ and pressure being simulated.
 
 ```bash
 python pack_liquid_cellulose.py \
-  --cellulose-coordinates cellulose_ethanol/slab_build/structure.gro \
+  --cellulose-coordinates cellulose_build/structure.gro \
   --smiles 'CCO' \
   --residue-name ETO \
   --molecules 1000 \
@@ -218,7 +224,7 @@ Useful options include `--tolerance-angstrom 2.0`, `--max-attempts 5`, and `--z-
 
 ```bash
 python combine_gromacs_topologies.py \
-  --primary cellulose_ethanol/slab_build/system.top \
+  --primary cellulose_build/system.top \
   --secondary cellulose_ethanol/ethanol.top \
   --combined-coordinates cellulose_ethanol/interface.pdb \
   --output-directory cellulose_ethanol \
