@@ -85,17 +85,16 @@ def residue_name(value: str) -> str:
     return name
 
 
-def molar_mass(smiles: str, obabel: str) -> float:
-    result = subprocess.run(
-        [obabel, f"-:{smiles}", "-osmi", "--append", "MW"],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    fields = result.stdout.split()
-    if len(fields) < 2:
-        raise RuntimeError("Open Babel did not return a molecular weight")
-    return float(fields[-1])
+def molar_mass(smiles: str) -> float:
+    try:
+        from rdkit import Chem
+        from rdkit.Chem import Descriptors
+    except ImportError as error:
+        raise RuntimeError("RDKit is required to calculate molecular mass") from error
+    molecule = Chem.MolFromSmiles(smiles)
+    if molecule is None:
+        raise ValueError(f"RDKit could not parse SMILES: {smiles!r}")
+    return float(Descriptors.MolWt(molecule))
 
 
 def normalize_template_names(pdb_path: Path, residue: str) -> None:
@@ -177,6 +176,11 @@ def parser() -> argparse.ArgumentParser:
         help="rigid water preset (uses model-specific geometry and virtual sites)",
     )
     result.add_argument(
+        "--liquid-template",
+        type=Path,
+        help="parameterized liquid PDB template; with --smiles, preferred over Open Babel",
+    )
+    result.add_argument(
         "--residue-name",
         type=residue_name,
         help="molecular-liquid residue name (default: MOL); water presets use SOL",
@@ -208,13 +212,19 @@ def parser() -> argparse.ArgumentParser:
     )
     result.add_argument("--seed", type=int, default=1234567)
     result.add_argument("--packmol", type=executable, default="packmol")
-    result.add_argument("--obabel", type=executable, default="obabel")
+    result.add_argument(
+        "--obabel",
+        default="obabel",
+        help="Open Babel executable used only when --liquid-template is omitted",
+    )
     result.add_argument("--dry-run", action="store_true")
     return result
 
 
 def main() -> int:
     args = parser().parse_args()
+    if args.liquid_template and args.water_model:
+        raise ValueError("--liquid-template cannot be used with --water-model")
     if args.molecules % 2:
         raise ValueError(
             "--molecules must be even so the two cellulose surfaces receive equal counts"
@@ -227,7 +237,7 @@ def main() -> int:
         if args.residue_name and args.residue_name != residue:
             raise ValueError("water presets require --residue-name SOL")
     else:
-        mass = molar_mass(args.smiles, args.obabel)
+        mass = molar_mass(args.smiles)
         liquid_name = args.smiles
         residue = args.residue_name or "MOL"
     slab_z_min = min(atom.xyz[2] for atom in cellulose_atoms)
@@ -276,6 +286,7 @@ def main() -> int:
     attempts_used = 0
     last_numbers: tuple[int, float, float, float] | None = None
     last_result: subprocess.CompletedProcess[str] | None = None
+    obabel_used = False
     try:
         with tempfile.TemporaryDirectory(prefix="pack_liquid_cellulose_") as temporary_name:
             temporary = Path(temporary_name)
@@ -283,7 +294,23 @@ def main() -> int:
             liquid_template = temporary / "liquid.pdb"
             if args.water_model:
                 write_water_pdb(args.water_model, liquid_template)
+            elif args.liquid_template:
+                if not args.liquid_template.is_file():
+                    raise ValueError(f"liquid template does not exist: {args.liquid_template}")
+                shutil.copy2(args.liquid_template, liquid_template)
+                template_records = [
+                    line
+                    for line in liquid_template.read_text().splitlines()
+                    if line.startswith(("ATOM  ", "HETATM"))
+                ]
+                template_names = [line[12:16].strip() for line in template_records]
+                if not template_names or any(not name for name in template_names):
+                    raise ValueError("liquid template must contain named PDB atoms")
+                if len(set(template_names)) != len(template_names):
+                    raise ValueError("liquid template atom names must be unique within the molecule")
             else:
+                args.obabel = executable(args.obabel)
+                obabel_used = True
                 subprocess.run(
                     [
                         args.obabel,
@@ -400,7 +427,11 @@ end structure
                         },
                         "tool_versions": {
                             "packmol": command_version([args.packmol, "--version"]),
-                            "openbabel": command_version([args.obabel, "-V"]),
+                            "openbabel": (
+                                command_version([args.obabel, "-V"])
+                                if obabel_used
+                                else "not used"
+                            ),
                             "pack_liquid_cellulose": VERSION,
                         },
                     }

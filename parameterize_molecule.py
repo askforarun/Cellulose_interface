@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+import json
+import re
 import shutil
 import subprocess
 import sys
@@ -21,6 +23,34 @@ from combine_gromacs_topologies import (
     selected_molecule,
 )
 VERSION = project_version()
+
+
+def generate_conformer(smiles: str, seed: int, output: Path) -> float:
+    try:
+        from rdkit import Chem
+        from rdkit.Chem import AllChem
+    except ImportError as error:
+        raise RuntimeError("RDKit is required for deterministic conformer generation") from error
+    molecule = Chem.MolFromSmiles(smiles)
+    if molecule is None:
+        raise ValueError(f"RDKit could not parse SMILES: {smiles!r}")
+    molecule = Chem.AddHs(molecule)
+    parameters = AllChem.ETKDGv3()
+    parameters.randomSeed = seed
+    if AllChem.EmbedMolecule(molecule, parameters) != 0:
+        raise RuntimeError("RDKit ETKDG conformer generation failed")
+    properties = AllChem.MMFFGetMoleculeProperties(molecule)
+    if properties is None:
+        raise RuntimeError("RDKit MMFF parameters are unavailable for this molecule")
+    status = AllChem.MMFFOptimizeMolecule(molecule, mmffVariant="MMFF94")
+    if status != 0:
+        raise RuntimeError(f"RDKit MMFF conformer optimization did not converge (status {status})")
+    force_field = AllChem.MMFFGetMoleculeForceField(molecule, properties)
+    if force_field is None:
+        raise RuntimeError("RDKit could not construct the MMFF force field")
+    energy = float(force_field.CalcEnergy())
+    Chem.MolToPDBFile(molecule, str(output))
+    return energy
 
 
 def normalize_template_names(pdb_path: Path, residue: str) -> None:
@@ -68,9 +98,9 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--smiles", required=True, help='molecular SMILES, e.g. "CCO"')
     result.add_argument("--residue-name", type=residue_name, default="MOL")
     result.add_argument("--net-charge", type=int, default=0)
+    result.add_argument("--seed", type=int, default=2026, help="RDKit ETKDG random seed")
     result.add_argument("--prefix", default="molecule", help="output filename prefix")
     result.add_argument("--output-directory", type=Path, default=Path("."))
-    result.add_argument("--obabel", type=executable, default="obabel")
     result.add_argument("--antechamber", type=executable, default="antechamber")
     result.add_argument("--parmchk2", type=executable, default="parmchk2")
     result.add_argument("--tleap", type=executable, default="tleap")
@@ -96,10 +126,7 @@ def run(args: argparse.Namespace) -> tuple[Path, ...]:
         prmtop = temporary / "molecule.prmtop"
         inpcrd = temporary / "molecule.inpcrd"
 
-        subprocess.run(
-            [args.obabel, f"-:{args.smiles}", "--gen3d", "-h", "-opdb", "-O", str(input_pdb)],
-            check=True,
-        )
+        conformer_energy = generate_conformer(args.smiles, args.seed, input_pdb)
         normalize_template_names(input_pdb, args.residue_name)
         subprocess.run(
             [
@@ -141,6 +168,8 @@ def run(args: argparse.Namespace) -> tuple[Path, ...]:
             cwd=temporary,
             check=True,
         )
+        if "ATTN, need revision" in frcmod.read_text():
+            raise RuntimeError("parmchk2 reported 'ATTN, need revision' in the frcmod file")
 
         leap_input = temporary / "tleap.in"
         leap_input.write_text(
@@ -156,7 +185,16 @@ def run(args: argparse.Namespace) -> tuple[Path, ...]:
                 )
             )
         )
-        subprocess.run([args.tleap, "-f", str(leap_input)], cwd=temporary, check=True)
+        tleap_result = subprocess.run(
+            [args.tleap, "-f", str(leap_input)],
+            cwd=temporary,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=True,
+        )
+        if re.search(r"Errors\s*=\s*0\b", tleap_result.stdout) is None:
+            raise RuntimeError("tleap output did not report 'Errors = 0'")
 
         destinations = {
             input_pdb: output_directory / f"{args.prefix}.pdb",
@@ -197,7 +235,30 @@ def run(args: argparse.Namespace) -> tuple[Path, ...]:
             + "\n"
         )
 
-    return (*destinations.values(), gromacs_top, gromacs_gro, atomtypes_itp, molecule_itp)
+        report = output_directory / f"{args.prefix}_parameterization_report.json"
+        report.write_text(
+            json.dumps(
+                {
+                    "smiles": args.smiles,
+                    "residue_name": args.residue_name,
+                    "net_charge": args.net_charge,
+                    "rdkit_etkdg_seed": args.seed,
+                    "mmff_energy_kcal_mol": conformer_energy,
+                    "tleap_errors": 0,
+                },
+                indent=2,
+            )
+            + "\n"
+        )
+
+    return (
+        *destinations.values(),
+        gromacs_top,
+        gromacs_gro,
+        atomtypes_itp,
+        molecule_itp,
+        report,
+    )
 
 
 def main() -> int:
