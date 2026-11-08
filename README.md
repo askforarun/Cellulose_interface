@@ -51,6 +51,11 @@ GLYCAM cellulose and a GAFF2 or rigid-water liquid.
 - **Slab coordinates + liquid** → a packed `interface.pdb`.
 - **Slab topology + liquid topology + packed coordinates** → `interface.gro`,
   `system.top`, `forcefield.itp`, `slab.itp` and `liquid.itp`.
+- **Combined system + supplied MDP files and batch scripts** → restrained
+  minimization, fixed-area NPT and NVT production. The MDP files (`em.mdp`,
+  `npt.mdp`, `nvt_production.mdp`, and their `_3000` and extended versions)
+  are provided in `cellulose_ethanol/`, not generated; see
+  [MDP files](#mdp-files).
 
 Every command writes into `--output-directory` (default: the current
 directory) under fixed names that never clash, so one directory can hold the
