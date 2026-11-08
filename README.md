@@ -20,7 +20,8 @@ combined topology.** This is validated against Amber and OpenMM.
 - **🧪 Any small-molecule liquid from SMILES**: GAFF2 atom types and AM1-BCC
   charges via AmberTools, written as Amber and GROMACS topologies.
 - **💧 Rigid water presets**: SPC, SPC/E, TIP3P, TIP4P, TIP4P-Ew and TIP5P,
-  with model-specific geometry, constraints and virtual sites.
+  with model-specific geometry, constraints and virtual sites (see
+  [Water Models](#water-models)).
 - **📦 Two-sided periodic packing**: Packmol places half the liquid on each
   cellulose surface, sized from the requested density.
 - **⚖️ Mixed 1–4 scaling in one topology**: GLYCAM's unit 1–4 scaling is kept
@@ -72,10 +73,14 @@ Run commands from the `Cellulose_interface` project root.
   - [4. Assemble the combined GROMACS system](#4-assemble-the-combined-gromacs-system)
   - [5. Run restrained minimization, NPT, and NVT](#5-run-restrained-minimization-npt-and-nvt)
   - [6. Check progress and equilibration](#6-check-progress-and-equilibration)
-  - [Rigid water models](#rigid-water-models)
   - [Pure-ethanol reference density](#pure-ethanol-reference-density)
   - [Extending equilibration and restarting production](#extending-equilibration-and-restarting-production)
   - [Larger liquid reservoir: 1,500 ethanol molecules per surface](#larger-liquid-reservoir-1500-ethanol-molecules-per-surface)
+- [Water Models](#water-models)
+  - [Available presets](#available-presets)
+  - [Prepare a water topology](#prepare-a-water-topology)
+  - [Pack and combine a water interface](#pack-and-combine-a-water-interface)
+  - [Notes](#notes)
 - [Validation](#validation)
   - [GROMACS pair-conversion check (ethanol)](#gromacs-pair-conversion-check-ethanol)
   - [Independent Amber and OpenMM verification](#independent-amber-and-openmm-verification)
@@ -512,58 +517,6 @@ Each stage writes its own log and energy file; dynamics also writes compressed t
 
 Use `gmx energy` (or `gmx_mpi energy`) to inspect temperature, potential energy, pressure, and box lengths from `npt.edr` and `nvt_production.edr`. X and Y should remain fixed throughout this NPT protocol. Check Z relaxation, cellulose structure, and the ethanol mass-density profile along Z before judging equilibration. The current batch script advances automatically after 500 ps; it does not decide whether equilibration has been achieved.
 
-### Rigid water models
-
-Water must not be parameterized from the SMILES `O`. Use a model-specific
-geometry, charges, Lennard-Jones parameters, constraints, and virtual sites.
-The workflow provides these AMBER-family GROMACS presets:
-
-- `spc`
-- `spce`
-- `tip3p`
-- `tip4p`
-- `tip4pew`
-- `tip5p`
-
-Prepare the chosen topology and inspectable single-water template, for example:
-
-```bash
-python prepare_water_model.py \
-  --model tip4pew \
-  --output-directory cellulose_water
-```
-
-This writes `water_tip4pew.top`, `water_tip4pew.pdb`,
-`water_tip4pew.itp`, and `water_tip4pew_atomtypes.itp`. Pack the same model
-on both cellulose surfaces without Open Babel:
-
-```bash
-python pack_liquid_cellulose.py \
-  --cellulose-coordinates cellulose_build/structure.gro \
-  --water-model tip4pew \
-  --molecules 3000 \
-  --density 0.997 \
-  --output cellulose_water/interface.pdb
-```
-
-Then combine it using the generated standalone water topology:
-
-```bash
-python combine_gromacs_topologies.py \
-  --slab cellulose_build/system.top \
-  --liquid cellulose_water/water_tip4pew.top \
-  --combined-coordinates cellulose_water/interface.pdb \
-  --output-directory cellulose_water \
-  --system-name 'Cellulose I-beta TIP4P-Ew water interface'
-```
-
-The model definitions follow the AMBER-family files distributed with GROMACS.
-TIP4P, TIP4P-Ew, and TIP5P include their required massless virtual sites. These
-presets are fixed-charge rigid models; they do not imply support for arbitrary
-polarizable or many-body water models. The density is still a user-selected
-initial packing target and should be appropriate for the model, temperature,
-and pressure being simulated.
-
 ### Pure-ethanol reference density
 
 A separate bulk-liquid calculation lives in `cellulose_ethanol/pure_ethanol/`. It contains 1,000 ethanol molecules (9,000 atoms), with the same GAFF2/AM1-BCC parameters and charge-rounding correction as the interface liquid. Its standalone topology uses native GAFF2 type-1 pairs and global scaling of 0.5 for LJ-14 and 0.83333333 for Coulomb-14. There is no cellulose and no position restraint.
@@ -622,6 +575,79 @@ sbatch run_interface_3000.sbatch
 ```
 
 This job runs restrained steepest-descent minimization followed by **2.5 ns NPT** at 298.15 K and 1 bar. It uses C-rescale semi-isotropic pressure coupling with `compressibility = 0.0 4.5e-5`, keeping X/Y fixed while Z relaxes. Middle-layer heavy-atom position restraints remain enabled with `POSRES_CELLULOSE`. Output prefixes are `em_3000` and `npt_3000`. This job stops after NPT; it does not automatically launch NVT. Compare late-time liquid density profiles with the smaller reservoir and pure-liquid reference before deciding the next stage.
+
+## Water Models
+
+Water must not be parameterized from the SMILES `O`. Use a model-specific
+geometry, charges, Lennard-Jones parameters, constraints, and virtual sites.
+The workflow provides these AMBER-family GROMACS presets:
+
+- `spc`
+- `spce`
+- `tip3p`
+- `tip4p`
+- `tip4pew`
+- `tip5p`
+
+### Available presets
+
+Values as written by `water_models.py`. All models are rigid (`[ settles ]`),
+and the hydrogens carry no Lennard-Jones parameters.
+
+| Preset | Sites | Charges (e): O, H, virtual site | O–H (nm) | H–O–H (°) | Virtual site | O σ (nm), ε (kJ/mol) |
+| --- | --- | --- | --- | --- | --- | --- |
+| `spc` | 3 | −0.82, +0.41 | 0.1000 | 109.47 | — | 0.316557, 0.650629 |
+| `spce` | 3 | −0.8476, +0.4238 | 0.1000 | 109.47 | — | 0.316557, 0.650629 |
+| `tip3p` | 3 | −0.834, +0.417 | 0.09572 | 104.52 | — | 0.315061, 0.636386 |
+| `tip4p` | 4 | 0, +0.52, −1.04 | 0.09572 | 104.52 | M, 0.0150 nm from O | 0.315365, 0.648520 |
+| `tip4pew` | 4 | 0, +0.52422, −1.04844 | 0.09572 | 104.52 | M, 0.0125 nm from O | 0.316435, 0.680946 |
+| `tip5p` | 5 | 0, +0.241, −0.241 (each) | 0.09572 | 104.52 | two lone pairs, 0.070 nm from O | 0.312000, 0.669440 |
+
+### Prepare a water topology
+
+Prepare the chosen topology and inspectable single-water template, for example:
+
+```bash
+python prepare_water_model.py \
+  --model tip4pew \
+  --output-directory cellulose_water
+```
+
+This writes `water_tip4pew.top`, `water_tip4pew.pdb`,
+`water_tip4pew.itp`, and `water_tip4pew_atomtypes.itp`.
+
+### Pack and combine a water interface
+
+Pack the same model on both cellulose surfaces without Open Babel:
+
+```bash
+python pack_liquid_cellulose.py \
+  --cellulose-coordinates cellulose_build/structure.gro \
+  --water-model tip4pew \
+  --molecules 3000 \
+  --density 0.997 \
+  --output cellulose_water/interface.pdb
+```
+
+Then combine it using the generated standalone water topology:
+
+```bash
+python combine_gromacs_topologies.py \
+  --slab cellulose_build/system.top \
+  --liquid cellulose_water/water_tip4pew.top \
+  --combined-coordinates cellulose_water/interface.pdb \
+  --output-directory cellulose_water \
+  --system-name 'Cellulose I-beta TIP4P-Ew water interface'
+```
+
+### Notes
+
+The model definitions follow the AMBER-family files distributed with GROMACS.
+TIP4P, TIP4P-Ew, and TIP5P include their required massless virtual sites. These
+presets are fixed-charge rigid models; they do not imply support for arbitrary
+polarizable or many-body water models. The density is still a user-selected
+initial packing target and should be appropriate for the model, temperature,
+and pressure being simulated.
 
 ## Validation
 
