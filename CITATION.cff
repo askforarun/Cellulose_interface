@@ -1,0 +1,172 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it, together with CelluloseForge and the force fields and tools listed under references."
+title: "Cellulose_interface: cellulose–liquid interface workflow for GROMACS"
+type: software
+version: 0.7.0
+license: GPL-3.0-or-later
+authors:
+  - family-names: "Sridhar"
+    given-names: "Arun Srikanth"
+repository-code: "https://github.com/askforarun/Cellulose_interface"
+abstract: >-
+  Builds a crystalline GLYCAM cellulose slab with CelluloseForge, parameterizes
+  a small-molecule liquid with GAFF2/AM1-BCC or uses a rigid water preset, packs
+  the liquid on both cellulose surfaces, and writes one combined GROMACS system
+  in which each force field keeps its own 1–4 scaling.
+keywords:
+  - cellulose
+  - interface
+  - GLYCAM
+  - GAFF2
+  - GROMACS
+  - molecular dynamics
+references:
+  - type: software
+    title: "CelluloseForge"
+    version: 1.1.2
+    authors:
+      - family-names: "Sridhar"
+        given-names: "Arun Srikanth"
+    repository-code: "https://github.com/askforarun/cellulose-forge"
+  - type: article
+    title: "Cellulose-Builder: A toolkit for building crystalline structures of cellulose"
+    authors:
+      - family-names: "Gomes"
+        given-names: "Thiago C. F."
+      - family-names: "Skaf"
+        given-names: "Munir S."
+    journal: "Journal of Computational Chemistry"
+    volume: 33
+    start: 1338
+    end: 1346
+    year: 2012
+    doi: 10.1002/jcc.22959
+  - type: article
+    title: "GLYCAM06: A generalizable biomolecular force field. Carbohydrates"
+    authors:
+      - family-names: "Kirschner"
+        given-names: "Karl N."
+      - family-names: "Yongye"
+        given-names: "Austin B."
+      - family-names: "Tschampel"
+        given-names: "Sarah M."
+      - family-names: "González-Outeiriño"
+        given-names: "Jorge"
+      - family-names: "Daniels"
+        given-names: "Charlisa R."
+      - family-names: "Foley"
+        given-names: "B. Lachele"
+      - family-names: "Woods"
+        given-names: "Robert J."
+    journal: "Journal of Computational Chemistry"
+    volume: 29
+    start: 622
+    end: 655
+    year: 2008
+    doi: 10.1002/jcc.20820
+  - type: article
+    title: "Development and testing of a general amber force field"
+    authors:
+      - family-names: "Wang"
+        given-names: "Junmei"
+      - family-names: "Wolf"
+        given-names: "Romain M."
+      - family-names: "Caldwell"
+        given-names: "James W."
+      - family-names: "Kollman"
+        given-names: "Peter A."
+      - family-names: "Case"
+        given-names: "David A."
+    journal: "Journal of Computational Chemistry"
+    volume: 25
+    start: 1157
+    end: 1174
+    year: 2004
+    doi: 10.1002/jcc.20035
+  - type: article
+    title: "Fast, efficient generation of high-quality atomic charges. AM1-BCC model: II. Parameterization and validation"
+    authors:
+      - family-names: "Jakalian"
+        given-names: "Araz"
+      - family-names: "Jack"
+        given-names: "David B."
+      - family-names: "Bayly"
+        given-names: "Christopher I."
+    journal: "Journal of Computational Chemistry"
+    volume: 23
+    start: 1623
+    end: 1641
+    year: 2002
+    doi: 10.1002/jcc.10128
+  - type: article
+    title: "AmberTools"
+    authors:
+      - family-names: "Case"
+        given-names: "David A."
+      - name: "and co-authors"
+    journal: "Journal of Chemical Information and Modeling"
+    volume: 63
+    start: 6183
+    end: 6191
+    year: 2023
+    doi: 10.1021/acs.jcim.3c01153
+  - type: article
+    title: "PACKMOL: A package for building initial configurations for molecular dynamics simulations"
+    authors:
+      - family-names: "Martínez"
+        given-names: "Leandro"
+      - family-names: "Andrade"
+        given-names: "Ricardo"
+      - family-names: "Birgin"
+        given-names: "Ernesto G."
+      - family-names: "Martínez"
+        given-names: "José Mario"
+    journal: "Journal of Computational Chemistry"
+    volume: 30
+    start: 2157
+    end: 2164
+    year: 2009
+    doi: 10.1002/jcc.21224
+  - type: article
+    title: "Open Babel: An open chemical toolbox"
+    authors:
+      - family-names: "O'Boyle"
+        given-names: "Noel M."
+      - family-names: "Banck"
+        given-names: "Michael"
+      - family-names: "James"
+        given-names: "Craig A."
+      - family-names: "Morley"
+        given-names: "Chris"
+      - family-names: "Vandermeersch"
+        given-names: "Tim"
+      - family-names: "Hutchison"
+        given-names: "Geoffrey R."
+    journal: "Journal of Cheminformatics"
+    volume: 3
+    start: 33
+    year: 2011
+    doi: 10.1186/1758-2946-3-33
+  - type: article
+    title: "GROMACS: High performance molecular simulations through multi-level parallelism from laptops to supercomputers"
+    authors:
+      - family-names: "Abraham"
+        given-names: "Mark James"
+      - family-names: "Murtola"
+        given-names: "Teemu"
+      - family-names: "Schulz"
+        given-names: "Roland"
+      - family-names: "Páll"
+        given-names: "Szilárd"
+      - family-names: "Smith"
+        given-names: "Jeremy C."
+      - family-names: "Hess"
+        given-names: "Berk"
+      - family-names: "Lindahl"
+        given-names: "Erik"
+    journal: "SoftwareX"
+    volume: 1
+    start: 19
+    end: 25
+    year: 2015
+    doi: 10.1016/j.softx.2015.06.001
