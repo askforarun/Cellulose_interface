@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a dimension-driven cellulose slab with an installed CelluloseForge 1.1.1."""
+"""Build a dimension-driven cellulose slab with an installed CelluloseForge 1.1.2."""
 
 from __future__ import annotations
 
@@ -24,6 +24,11 @@ def cli() -> int:
     parser.add_argument("--length", type=float, required=True, help="slab length in angstrom")
     parser.add_argument("--chain-boundary", choices=("periodic", "finite"), default="periodic")
     parser.add_argument("--vacuum", type=float, default=0.0, help="vacuum padding in angstrom")
+    parser.add_argument(
+        "--padding-longitudinal",
+        type=float,
+        help="total chain-axis padding in angstrom for finite cellulose chains",
+    )
     parser.add_argument("--force-field", default="glycam", choices=("none", "glycam", "charmm36"))
     parser.add_argument("--restrain-layers", nargs="+", type=int)
     parser.add_argument("--restraint-force", nargs=3, type=float, default=(1000.0, 1000.0, 1000.0))
@@ -46,7 +51,7 @@ def cli() -> int:
     if forge is None:
         parser.error(
             f"CelluloseForge executable {args.cellulose_forge_executable!r} not found; "
-            "install CelluloseForge 1.1.1 or pass --cellulose-forge-executable"
+            "install CelluloseForge 1.1.2 or pass --cellulose-forge-executable"
         )
 
     command = [
@@ -73,6 +78,8 @@ def cli() -> int:
         "--output",
         str(args.output.resolve()),
     ]
+    if args.padding_longitudinal is not None:
+        command.extend(("--padding-longitudinal", str(args.padding_longitudinal)))
     if args.restrain_layers:
         command.extend(("--restrain-layers", *(str(value) for value in args.restrain_layers)))
         command.extend(("--restraint-force", *(str(value) for value in args.restraint_force)))
