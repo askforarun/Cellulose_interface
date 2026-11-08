@@ -10,7 +10,9 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-VERSION = "0.6.0"
+from project_version import project_version
+
+VERSION = project_version()
 SECTION = re.compile(r"^\s*\[\s*([^]]+?)\s*]\s*(?:;.*)?$")
 
 

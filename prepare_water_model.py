@@ -7,9 +7,10 @@ import argparse
 import sys
 from pathlib import Path
 
+from project_version import project_version
 from water_models import MODELS, topology_parts, write_water_pdb, write_water_topology
 
-VERSION = "0.1.0"
+VERSION = project_version()
 
 
 def main() -> int:

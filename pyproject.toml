@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cellulose-ethanol-tools"
-version = "0.7.0"
+version = "0.8.0.dev0"
 description = "Pack fixed-size molecular boxes for cellulose interfaces."
 requires-python = ">=3.11"
 license = { text = "GPL-3.0-or-later" }
@@ -17,4 +17,4 @@ build-cellulose-slab = "build_cellulose_slab:cli"
 prepare-water-model = "prepare_water_model:main"
 
 [tool.setuptools]
-py-modules = ["pack_liquid_cellulose", "parameterize_molecule", "combine_gromacs_topologies", "build_cellulose_slab", "prepare_water_model", "water_models"]
+py-modules = ["pack_liquid_cellulose", "parameterize_molecule", "combine_gromacs_topologies", "build_cellulose_slab", "prepare_water_model", "project_version", "water_models"]

@@ -11,6 +11,8 @@ import tempfile
 from collections import defaultdict
 from pathlib import Path
 
+from project_version import project_version
+
 from combine_gromacs_topologies import (
     atomtypes,
     defaults,
@@ -18,7 +20,7 @@ from combine_gromacs_topologies import (
     molecule_block,
     selected_molecule,
 )
-VERSION = "0.2.0"
+VERSION = project_version()
 
 
 def normalize_template_names(pdb_path: Path, residue: str) -> None:

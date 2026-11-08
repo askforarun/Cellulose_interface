@@ -10,8 +10,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+from project_version import project_version
 
-VERSION = "0.4.0"
+
+VERSION = project_version()
 DEFAULT_FORGE = "cellulose-forge"
 STAGING_NAME = ".cellulose_forge_build"
 # CelluloseForge report output keys -> names written in --output-directory. The

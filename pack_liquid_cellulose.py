@@ -13,10 +13,11 @@ from collections import defaultdict
 from pathlib import Path
 
 from combine_gromacs_topologies import CoordinateAtom, read_coordinates
+from project_version import project_version
 from water_models import MODELS, WATER_MOLAR_MASS, write_water_pdb
 
 AVOGADRO_VOLUME_FACTOR = 602.214076  # molecules nm^-3 from mol cm^-3
-VERSION = "0.3.0"
+VERSION = project_version()
 
 
 def positive_float(value: str) -> float:
