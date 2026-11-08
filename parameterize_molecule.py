@@ -10,7 +10,6 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from collections import defaultdict
 from pathlib import Path
 
 from project_version import project_version
@@ -49,27 +48,41 @@ def generate_conformer(smiles: str, seed: int, output: Path) -> float:
     if force_field is None:
         raise RuntimeError("RDKit could not construct the MMFF force field")
     energy = float(force_field.CalcEnergy())
-    Chem.MolToPDBFile(molecule, str(output))
+    Chem.MolToMolFile(molecule, str(output))
     return energy
 
 
-def normalize_template_names(pdb_path: Path, residue: str) -> None:
-    """Give each element a unique, topology-friendly name within the molecule."""
-    counts: defaultdict[str, int] = defaultdict(int)
+def write_template_from_mol2(mol2: Path, pdb: Path, residue: str) -> None:
+    """Preserve antechamber's atom order and names in the Packmol template."""
+    lines = mol2.read_text().splitlines()
+    try:
+        start = lines.index("@<TRIPOS>ATOM") + 1
+    except ValueError as error:
+        raise ValueError(f"mol2 has no atom section: {mol2}") from error
     output: list[str] = []
-    for line in pdb_path.read_text().splitlines(keepends=True):
-        if line.startswith(("ATOM  ", "HETATM")):
-            element = line[76:78].strip().upper()
-            if not element:
-                element = "".join(character for character in line[12:16] if character.isalpha())
-                element = element[:2].upper()
-            counts[element] += 1
-            atom_name = f"{element}{counts[element]}"
-            if len(atom_name) > 4:
-                raise RuntimeError(f"cannot represent atom name in PDB format: {atom_name}")
-            line = line[:12] + f"{atom_name:>4}" + line[16:17] + f"{residue:>3}" + line[20:]
-        output.append(line)
-    pdb_path.write_text("".join(output))
+    for line in lines[start:]:
+        if line.startswith("@<TRIPOS>"):
+            break
+        if not line.strip():
+            continue
+        fields = line.split()
+        if len(fields) < 6:
+            raise ValueError(f"invalid mol2 atom row: {line}")
+        serial = len(output) + 1
+        name = fields[1]
+        if int(fields[0]) != serial or len(name) > 4:
+            raise ValueError(f"unsupported mol2 atom index or name: {line}")
+        x, y, z = (float(value) for value in fields[2:5])
+        element = re.match(r"[A-Z][a-z]?", name)
+        if element is None:
+            raise ValueError(f"cannot infer element from mol2 atom name {name!r}")
+        output.append(
+            f"HETATM{serial:5d} {name:>4} {residue:>3} {1:4d}    "
+            f"{x:8.3f}{y:8.3f}{z:8.3f}  1.00  0.00          {element.group():>2}"
+        )
+    if not output:
+        raise ValueError(f"mol2 has no atoms: {mol2}")
+    pdb.write_text("\n".join((*output, "TER", "END", "")))
 
 
 def executable(value: str) -> str:
@@ -120,21 +133,21 @@ def run(args: argparse.Namespace) -> tuple[Path, ...]:
 
     with tempfile.TemporaryDirectory(prefix="parameterize_molecule_") as temporary_name:
         temporary = Path(temporary_name)
+        input_mol = temporary / "input.sdf"
         input_pdb = temporary / "input.pdb"
         mol2 = temporary / "molecule.mol2"
         frcmod = temporary / "molecule.frcmod"
         prmtop = temporary / "molecule.prmtop"
         inpcrd = temporary / "molecule.inpcrd"
 
-        conformer_energy = generate_conformer(args.smiles, args.seed, input_pdb)
-        normalize_template_names(input_pdb, args.residue_name)
+        conformer_energy = generate_conformer(args.smiles, args.seed, input_mol)
         subprocess.run(
             [
                 args.antechamber,
                 "-i",
-                str(input_pdb),
+                str(input_mol),
                 "-fi",
-                "pdb",
+                "mdl",
                 "-o",
                 str(mol2),
                 "-fo",
@@ -153,6 +166,7 @@ def run(args: argparse.Namespace) -> tuple[Path, ...]:
             cwd=temporary,
             check=True,
         )
+        write_template_from_mol2(mol2, input_pdb, args.residue_name)
         subprocess.run(
             [
                 args.parmchk2,

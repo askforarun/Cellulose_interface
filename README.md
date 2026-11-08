@@ -279,6 +279,9 @@ unless stated otherwise; GROMACS box dimensions are in **nm**.
 | `--antechamber`, `--parmchk2`, `--tleap` | optional | Executable names or paths. Defaults: found on `PATH` |
 
 Conformer generation uses seeded RDKit ETKDG followed by MMFF94 optimization.
+RDKit passes an SDF/MOL file to antechamber so multiple and aromatic bond orders
+are retained. The packing PDB is generated from antechamber's mol2 atom names
+and order, matching the resulting topology.
 The command writes `PREFIX_parameterization_report.json` with the seed and
 optimized conformer energy. Parameterization stops if parmchk2 marks a term
 for revision or tleap does not report zero errors.
@@ -317,6 +320,8 @@ the requested and achieved density, volumes, attempts, seed, settings, and tool
 versions. A retry that would exceed `--max-density-loss` is refused. Packmol
 writes a temporary candidate, which is validated and atomically installed, so
 a failed run cannot destroy an existing packed interface.
+With the default growth factor `1.05` and maximum density loss `0.05`, at most
+two packing attempts are allowed, even though `--max-attempts` defaults to five.
 
 ### `combine_gromacs_topologies.py`
 
@@ -333,6 +338,10 @@ a failed run cannot destroy an existing packed interface.
 | `--interface-gap` | optional | Gap at each periodic interface (nm) when assembling. Default: `0.0` |
 | `--coordinate-layout` | optional | `centered-slab` or `stacked` when assembling. Default: `centered-slab` |
 | `--system-name` | optional | `[ system ]` title. Default: `Combined molecular system` |
+
+PDB residue names are limited to three characters. For a liquid topology with
+a longer residue name, use `--liquid-residue-name` to specify the three-character
+name used in the packed coordinates.
 
 ## How It Works
 
