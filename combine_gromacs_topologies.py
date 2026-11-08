@@ -87,24 +87,58 @@ def write_gro(atoms: list[CoordinateAtom], box: list[float], output: Path) -> No
 
 
 def use_combined_coordinates(
-    path: Path, output: Path, secondary_resname: str
+    path: Path,
+    output: Path,
+    liquid_resname: str,
+    expected_atom_names: list[str],
 ) -> tuple[int, int, list[float]]:
     atoms, box = read_coordinates(path)
-    secondary_indices = [
-        index for index, atom in enumerate(atoms) if atom.resname == secondary_resname
+    liquid_indices = [
+        index for index, atom in enumerate(atoms) if atom.resname == liquid_resname
     ]
-    if not secondary_indices:
+    if not liquid_indices:
         raise ValueError(
-            f"combined coordinates contain no residue named {secondary_resname}"
+            f"combined coordinates contain no liquid residue named {liquid_resname}"
         )
-    first_secondary = min(secondary_indices)
-    if any(atom.resname != secondary_resname for atom in atoms[first_secondary:]):
+    first_liquid = min(liquid_indices)
+    liquid_atoms = atoms[first_liquid:]
+    if any(atom.resname != liquid_resname for atom in liquid_atoms):
         raise ValueError(
             "combined coordinates must list all slab atoms before liquid molecules"
         )
-    secondary_count = residue_count(atoms[first_secondary:])
+    liquid_count = validate_liquid_residues(
+        liquid_atoms, liquid_resname, expected_atom_names
+    )
     write_gro(atoms, box, output)
-    return first_secondary, secondary_count, box
+    return first_liquid, liquid_count, box
+
+
+def validate_liquid_residues(
+    atoms: list[CoordinateAtom], residue_name: str, expected_atom_names: list[str]
+) -> int:
+    if not expected_atom_names:
+        raise ValueError("liquid topology contains no atoms")
+    count = 0
+    start = 0
+    while start < len(atoms):
+        atom = atoms[start]
+        key = (atom.resid, atom.resname)
+        end = start + 1
+        while end < len(atoms) and (atoms[end].resid, atoms[end].resname) == key:
+            end += 1
+        if atom.resname != residue_name:
+            raise ValueError(
+                f"expected liquid residue name {residue_name}, found {atom.resname}"
+            )
+        found_names = [entry.atomname for entry in atoms[start:end]]
+        if found_names != expected_atom_names:
+            raise ValueError(
+                f"liquid residue {atom.resid} ({residue_name}) atom mismatch: "
+                f"expected {expected_atom_names}, found {found_names}"
+            )
+        count += 1
+        start = end
+    return count
 
 
 def assemble_coordinates(
@@ -291,6 +325,23 @@ def atom_data(block: list[str]) -> tuple[dict[int, str], dict[int, float]]:
     return types, charges
 
 
+def molecule_coordinate_signature(block: list[str]) -> tuple[str, list[str]]:
+    """Return the single residue name and ordered atom names for one molecule."""
+    _, _, lines = section("\n".join(block), "atoms")
+    rows = data_rows(lines)
+    if not rows:
+        raise ValueError("liquid topology contains no [ atoms ] rows")
+    if any(len(row) < 5 for row in rows):
+        raise ValueError("unsupported liquid [ atoms ] row")
+    residue_names = {row[3] for row in rows}
+    if len(residue_names) != 1:
+        raise ValueError(
+            "liquid topology must use one residue name to infer packed molecules; "
+            "pass a one-residue liquid topology"
+        )
+    return next(iter(residue_names)), [row[4] for row in rows]
+
+
 def correct_charge_rounding(block: list[str], tolerance: float = 1e-4) -> list[str]:
     """Move a tiny printed-charge residual onto the final atom."""
     output = block.copy()
@@ -391,6 +442,10 @@ def main() -> int:
     parser.add_argument("--version", action="version", version=f"%(prog)s {VERSION}")
     parser.add_argument("--slab", required=True, type=Path)
     parser.add_argument("--liquid", required=True, type=Path)
+    parser.add_argument(
+        "--liquid-residue-name",
+        help="packed-coordinate residue name; defaults to the liquid [ atoms ] residue",
+    )
     parser.add_argument("--slab-coordinates", type=Path)
     parser.add_argument("--liquid-coordinates", type=Path)
     parser.add_argument(
@@ -447,6 +502,10 @@ def main() -> int:
 
     primary_text = args.slab.read_text()
     secondary_text = args.liquid.read_text()
+    if any(name == "pairtypes" for name, _, _ in sections(secondary_text)):
+        raise ValueError(
+            "liquid topology contains [ pairtypes ]; explicit pairtype conversion is unsupported"
+        )
     primary_defaults = defaults(primary_text)
     secondary_defaults = defaults(secondary_text)
     if primary_defaults.nbfunc != secondary_defaults.nbfunc:
@@ -472,6 +531,10 @@ def main() -> int:
     secondary_source_block = correct_charge_rounding(
         molecule_block(secondary_text, secondary_selected_name)
     )
+    topology_residue_name, liquid_atom_names = molecule_coordinate_signature(
+        secondary_source_block
+    )
+    liquid_residue_name = args.liquid_residue_name or topology_residue_name
     secondary_block = explicit_secondary_pairs(
         secondary_source_block,
         secondary_defaults,
@@ -484,7 +547,10 @@ def main() -> int:
     coordinate_output = output / names["coordinates"]
     if args.combined_coordinates:
         primary_atom_count, secondary_count, combined_box = use_combined_coordinates(
-            args.combined_coordinates, coordinate_output, secondary_name
+            args.combined_coordinates,
+            coordinate_output,
+            liquid_residue_name,
+            liquid_atom_names,
         )
     else:
         primary_atom_count, secondary_count, combined_box = assemble_coordinates(
