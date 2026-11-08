@@ -539,9 +539,13 @@ def main() -> int:
     return 0
 
 
-if __name__ == "__main__":
+def cli() -> None:
     try:
         sys.exit(main())
     except (OSError, ValueError) as error:
         print(f"Error: {error}", file=sys.stderr)
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    cli()

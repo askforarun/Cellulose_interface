@@ -12,9 +12,9 @@ license = { text = "GPL-3.0-or-later" }
 [project.scripts]
 pack-liquid-cellulose = "pack_liquid_cellulose:cli"
 parameterize-molecule = "parameterize_molecule:cli"
-combine-gromacs-topologies = "combine_gromacs_topologies:main"
+combine-gromacs-topologies = "combine_gromacs_topologies:cli"
 build-cellulose-slab = "build_cellulose_slab:cli"
-prepare-water-model = "prepare_water_model:main"
+prepare-water-model = "prepare_water_model:cli"
 
 [tool.setuptools]
 py-modules = ["pack_liquid_cellulose", "parameterize_molecule", "combine_gromacs_topologies", "build_cellulose_slab", "prepare_water_model", "project_version", "water_models"]
