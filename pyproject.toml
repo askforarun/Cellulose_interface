@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cellulose-ethanol-tools"
-version = "0.8.0.dev0"
+version = "0.8.0"
 description = "Pack fixed-size molecular boxes for cellulose interfaces."
 requires-python = ">=3.11"
 license = { text = "GPL-3.0-or-later" }

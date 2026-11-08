@@ -104,7 +104,7 @@ v3.0 or later (GPL-3.0-or-later), matching CelluloseForge. See
 If you use this software in your research, please cite it as:
 
 > Sridhar, A. S. *Cellulose_interface: cellulose–liquid interface workflow for
-> GROMACS* (version 0.8.0.dev0). https://github.com/askforarun/Cellulose_interface
+> GROMACS* (version 0.8.0). https://github.com/askforarun/Cellulose_interface
 
 The same metadata is in [`CITATION.cff`](CITATION.cff); GitHub's **Cite this
 repository** button exports it as APA or BibTeX.

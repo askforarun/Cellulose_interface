@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it, together with CelluloseForge and the force fields and tools listed under references."
 title: "Cellulose_interface: cellulose–liquid interface workflow for GROMACS"
 type: software
-version: 0.8.0.dev0
+version: 0.8.0
 license: GPL-3.0-or-later
 authors:
   - family-names: "Sridhar"
