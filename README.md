@@ -731,6 +731,7 @@ means the CelluloseForge GLYCAM cellulose topology plus the GAFF2 liquid, after
 **Test system:**
 - **Cellulose:** CelluloseForge 1.1.2, Iβ (110), 2 layers × 2 chains, DP 4,
   GLYCAM_06j-1. The chains are **finite**, so the comparison needs no cut-off.
+  The slab is **unrestrained** (no position restraints).
 - **Liquid:** the committed `cellulose_ethanol/ethanol.top`.
 - **Arrangement:** six ethanol molecules placed against both surfaces.
 
