@@ -2,7 +2,7 @@
 ;   File cellulose_periodic_chain.top  was generated
 ;   By user: arunsrikanthsridhar (501)
 ;   On host:Aruns-MacBook-Pro.local 
-;   At date:Fri. October  5 05:41:44 2026 
+;   At date:Sun. November  0 11:20:18 2026 
 ;
 ;   This is a standalone topology file
 ;
@@ -3780,5 +3780,5 @@ Generic title
 
 [ molecules ]
 ; Compound       #mols
-CELLULOSE_CHAIN  14
-CELLULOSE_CHAIN_RESTRAINED  14
+CELLULOSE_CHAIN  16
+CELLULOSE_CHAIN_RESTRAINED  16

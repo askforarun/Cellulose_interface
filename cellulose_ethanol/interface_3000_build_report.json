@@ -1,20 +1,20 @@
 {
-  "ethanol_molecules": 3000,
-  "ethanol_molecules_per_face": [
-    1500,
-    1500
-  ],
-  "cellulose_atoms": 4704,
-  "total_atoms": 31704,
-  "packing_density_g_cm3": 0.761501,
-  "box_nm": [
-    4.1751,
-    4.152,
-    19.525
-  ],
-  "cellulose_z_span_nm": 2.1400000000000006,
-  "initial_mean_liquid_thickness_per_face_nm": 8.692499999999999,
-  "protocol": "Restrained minimization then 2.5 ns NPT; C-rescale, 298.15 K, 1 bar; X/Y fixed, only Z relaxes; POSRES_CELLULOSE enabled",
-  "cellulose_source": "cellulose.gro / cellulose.top (original GLYCAM slab)",
-  "parameter_check": "Slab and liquid molecule ITP files byte-identical to original combined interface."
+ "ethanol_molecules": 3000,
+ "ethanol_molecules_per_face": [
+  1500,
+  1500
+ ],
+ "cellulose_atoms": 5376,
+ "total_atoms": 32376,
+ "packing_density_g_cm3": 0.761501,
+ "box_nm": [
+  4.7716,
+  4.152,
+  17.3879
+ ],
+ "cellulose_z_span_nm": 2.176,
+ "initial_mean_liquid_thickness_per_face_nm": 7.6059,
+ "protocol": "Restrained minimization then 2.5 ns NPT; C-rescale, 298.15 K, 1 bar; X/Y fixed, only Z relaxes; POSRES_CELLULOSE enabled",
+ "cellulose_source": "cellulose.gro / cellulose.top (CelluloseForge 1.1.2 GLYCAM slab)",
+ "parameter_check": "Slab and liquid molecule ITP files byte-identical to those of the 1000-molecule interface; liquid.itp unchanged from the previous release."
 }
