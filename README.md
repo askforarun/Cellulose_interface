@@ -389,6 +389,8 @@ Example: four layers, approximately 40 Å wide and 40 Å long, with periodic cel
 
 ```bash
 mkdir -p cellulose_build
+# Restraints: keep --restrain-layers and --restraint-force to restrain layers 2
+# and 3, or replace both lines with --no-restraints (example below).
 python build_cellulose_slab.py \
   --allomorph I-beta \
   --face 1 1 0 \
