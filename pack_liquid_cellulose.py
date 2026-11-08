@@ -263,57 +263,76 @@ def main() -> int:
 
     output = args.output_directory.resolve() / f"interface{'_' + args.suffix if args.suffix else ''}.pdb"
     output.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        dir=output.parent,
+        prefix=f".{output.stem}.",
+        suffix=".pdb",
+        delete=False,
+    ) as candidate_file:
+        candidate = Path(candidate_file.name)
+    candidate.unlink()
     final_z = initial_z
     attempts_used = 0
     last_numbers: tuple[int, float, float, float] | None = None
     last_result: subprocess.CompletedProcess[str] | None = None
-    with tempfile.TemporaryDirectory(prefix="pack_liquid_cellulose_") as temporary_name:
-        temporary = Path(temporary_name)
-        centered_cellulose = temporary / "cellulose_centered.pdb"
-        liquid_template = temporary / "liquid.pdb"
-        if args.water_model:
-            write_water_pdb(args.water_model, liquid_template)
-        else:
-            subprocess.run(
-                [
-                    args.obabel,
-                    f"-:{args.smiles}",
-                    "--gen3d",
-                    "-h",
-                    "-opdb",
-                    "-O",
-                    str(liquid_template),
-                ],
-                check=True,
-            )
-            normalize_template_names(liquid_template, residue)
-        for attempt in range(1, args.max_attempts + 1):
-            attempts_used = attempt
-            liquid_region = liquid_z * args.z_growth_factor ** (attempt - 1)
-            final_z = slab_thickness + liquid_region
-            volume = liquid_volume_nm3(
-                cellulose_box[0], cellulose_box[1], final_z, slab_thickness
-            )
-            achieved_density = density_from_volume(args.molecules, mass, volume)
-            last_numbers = (attempt, final_z, volume, achieved_density)
-            minimum_density = args.density * (1 - args.max_density_loss)
-            if achieved_density < minimum_density:
-                raise RuntimeError(
-                    "refusing Packmol attempt because the density-loss bound would be exceeded: "
-                    f"attempt={attempt}, final_z={final_z:.6f} nm, liquid_volume={volume:.6f} nm^3, "
-                    f"achieved_density={achieved_density:.6f} g/cm^3, "
-                    f"minimum_density={minimum_density:.6f} g/cm^3"
+    try:
+        with tempfile.TemporaryDirectory(prefix="pack_liquid_cellulose_") as temporary_name:
+            temporary = Path(temporary_name)
+            centered_cellulose = temporary / "cellulose_centered.pdb"
+            liquid_template = temporary / "liquid.pdb"
+            if args.water_model:
+                write_water_pdb(args.water_model, liquid_template)
+            else:
+                subprocess.run(
+                    [
+                        args.obabel,
+                        f"-:{args.smiles}",
+                        "--gen3d",
+                        "-h",
+                        "-opdb",
+                        "-O",
+                        str(liquid_template),
+                    ],
+                    check=True,
                 )
-            final_box = [cellulose_box[0], cellulose_box[1], final_z]
-            write_centered_cellulose(cellulose_atoms, cellulose_box, final_z, centered_cellulose)
-            lower_surface = liquid_region / 2
-            upper_surface = lower_surface + slab_thickness
-            molecules_per_side = args.molecules // 2
-            packmol_input = temporary / "packmol.inp"
-            packmol_input.write_text(
-                f"""tolerance {args.tolerance_angstrom:.6f}
+                normalize_template_names(liquid_template, residue)
+            template_atom_count = sum(
+                line.startswith(("ATOM  ", "HETATM"))
+                for line in liquid_template.read_text().splitlines()
+            )
+            if template_atom_count == 0:
+                raise RuntimeError(f"liquid template contains no atoms: {liquid_template}")
+            expected_atom_count = len(cellulose_atoms) + args.molecules * template_atom_count
+            for attempt in range(1, args.max_attempts + 1):
+                attempts_used = attempt
+                liquid_region = liquid_z * args.z_growth_factor ** (attempt - 1)
+                final_z = slab_thickness + liquid_region
+                volume = liquid_volume_nm3(
+                    cellulose_box[0], cellulose_box[1], final_z, slab_thickness
+                )
+                achieved_density = density_from_volume(args.molecules, mass, volume)
+                last_numbers = (attempt, final_z, volume, achieved_density)
+                minimum_density = args.density * (1 - args.max_density_loss)
+                if achieved_density < minimum_density:
+                    raise RuntimeError(
+                        "refusing Packmol attempt because the density-loss bound would be exceeded: "
+                        f"attempt={attempt}, final_z={final_z:.6f} nm, "
+                        f"liquid_volume={volume:.6f} nm^3, "
+                        f"achieved_density={achieved_density:.6f} g/cm^3, "
+                        f"minimum_density={minimum_density:.6f} g/cm^3"
+                    )
+                final_box = [cellulose_box[0], cellulose_box[1], final_z]
+                write_centered_cellulose(
+                    cellulose_atoms, cellulose_box, final_z, centered_cellulose
+                )
+                lower_surface = liquid_region / 2
+                upper_surface = lower_surface + slab_thickness
+                molecules_per_side = args.molecules // 2
+                packmol_input = temporary / "packmol.inp"
+                packmol_input.write_text(
+                    f"""tolerance {args.tolerance_angstrom:.6f}
 filetype pdb
-output {output}
+output {candidate}
 seed {args.seed}
 nloop {args.nloop}
 maxit {args.maxit}
@@ -337,54 +356,69 @@ structure {liquid_template}
   resnumbers 3
 end structure
 """
-            )
-            print(f"Packmol attempt {attempt}/{args.max_attempts}: z = {final_z:.6f} nm")
-            output.unlink(missing_ok=True)
-            with packmol_input.open() as input_file:
-                last_result = subprocess.run(
-                    [args.packmol], stdin=input_file, capture_output=True, text=True
                 )
-            if last_result.returncode == 0 and "Success!" in last_result.stdout:
-                add_cryst1(output, final_box)
-                report = {
-                    "requested_density_g_cm3": args.density,
-                    "molecules": args.molecules,
-                    "molar_mass_g_mol": mass,
-                    "slab_thickness_nm": slab_thickness,
-                    "initial_z_nm": initial_z,
-                    "final_z_nm": final_z,
-                    "attempts_used": attempts_used,
-                    "liquid_volume_nm3": volume,
-                    "achieved_density_g_cm3": achieved_density,
-                    "packmol_seed": args.seed,
-                    "packmol_settings": {
-                        "tolerance_angstrom": args.tolerance_angstrom,
-                        "maxit": args.maxit,
-                        "nloop": args.nloop,
-                        "max_attempts": args.max_attempts,
-                        "liquid_z_growth_factor": args.z_growth_factor,
-                        "max_density_loss": args.max_density_loss,
-                    },
-                    "tool_versions": {
-                        "packmol": command_version([args.packmol, "--version"]),
-                        "openbabel": command_version([args.obabel, "-V"]),
-                        "pack_liquid_cellulose": VERSION,
-                    },
-                }
-                report_path = output.with_name(output.stem + "_packing_report.json")
-                report_path.write_text(json.dumps(report, indent=2) + "\n")
-                print(f"Requested density:     {args.density:.6f} g/cm^3")
-                print(f"Final box Z:           {final_z:.6f} nm")
-                print(f"Liquid volume:         {volume:.6f} nm^3")
-                print(f"Achieved density:      {achieved_density:.6f} g/cm^3")
-                print(f"Packed interface coordinates written to: {output}")
-                print(f"Packing report written to: {report_path}")
-                return 0
-            if attempt < args.max_attempts:
-                print(
-                    "Packing failed; increasing only the liquid thickness by "
-                    f"a factor of {args.z_growth_factor:g} and retrying."
-                )
+                print(f"Packmol attempt {attempt}/{args.max_attempts}: z = {final_z:.6f} nm")
+                candidate.unlink(missing_ok=True)
+                with packmol_input.open() as input_file:
+                    last_result = subprocess.run(
+                        [args.packmol], stdin=input_file, capture_output=True, text=True
+                    )
+                if last_result.returncode == 0 and "Success!" in last_result.stdout:
+                    if not candidate.is_file():
+                        raise RuntimeError("Packmol reported success but wrote no coordinate file")
+                    add_cryst1(candidate, final_box)
+                    packed_atoms, packed_box = read_coordinates(candidate)
+                    if len(packed_atoms) != expected_atom_count:
+                        raise RuntimeError(
+                            "Packmol atom-count mismatch: "
+                            f"expected {expected_atom_count}, found {len(packed_atoms)}"
+                        )
+                    if any(abs(found - expected) > 1e-4 for found, expected in zip(packed_box, final_box)):
+                        raise RuntimeError(
+                            f"packed CRYST1 box mismatch: expected {final_box}, found {packed_box}"
+                        )
+                    candidate.replace(output)
+                    report = {
+                        "requested_density_g_cm3": args.density,
+                        "molecules": args.molecules,
+                        "molar_mass_g_mol": mass,
+                        "slab_thickness_nm": slab_thickness,
+                        "initial_z_nm": initial_z,
+                        "final_z_nm": final_z,
+                        "attempts_used": attempts_used,
+                        "liquid_volume_nm3": volume,
+                        "achieved_density_g_cm3": achieved_density,
+                        "packmol_seed": args.seed,
+                        "packmol_settings": {
+                            "tolerance_angstrom": args.tolerance_angstrom,
+                            "maxit": args.maxit,
+                            "nloop": args.nloop,
+                            "max_attempts": args.max_attempts,
+                            "liquid_z_growth_factor": args.z_growth_factor,
+                            "max_density_loss": args.max_density_loss,
+                        },
+                        "tool_versions": {
+                            "packmol": command_version([args.packmol, "--version"]),
+                            "openbabel": command_version([args.obabel, "-V"]),
+                            "pack_liquid_cellulose": VERSION,
+                        },
+                    }
+                    report_path = output.with_name(output.stem + "_packing_report.json")
+                    report_path.write_text(json.dumps(report, indent=2) + "\n")
+                    print(f"Requested density:     {args.density:.6f} g/cm^3")
+                    print(f"Final box Z:           {final_z:.6f} nm")
+                    print(f"Liquid volume:         {volume:.6f} nm^3")
+                    print(f"Achieved density:      {achieved_density:.6f} g/cm^3")
+                    print(f"Packed interface coordinates written to: {output}")
+                    print(f"Packing report written to: {report_path}")
+                    return 0
+                if attempt < args.max_attempts:
+                    print(
+                        "Packing failed; increasing only the liquid thickness by "
+                        f"a factor of {args.z_growth_factor:g} and retrying."
+                    )
+    finally:
+        candidate.unlink(missing_ok=True)
     assert last_result is not None
     details = (last_result.stderr or last_result.stdout)[-2000:]
     numbers = ""
