@@ -12,8 +12,10 @@ from pathlib import Path
 
 from combine_gromacs_topologies import (
     CoordinateAtom,
+    data_rows,
     molecule_block,
     molecule_coordinate_signature,
+    section,
     validate_liquid_residues,
 )
 
@@ -65,7 +67,13 @@ class ParameterizationIntegrationTests(unittest.TestCase):
                     for atom_name, expected_type in expected_types.items():
                         self.assertEqual(atom_types[atom_name], expected_type)
                     topology = (root / f"{prefix}.top").read_text()
-                    residue, expected_names = molecule_coordinate_signature(molecule_block(topology))
+                    block = molecule_block(topology)
+                    residue, expected_names = molecule_coordinate_signature(block)
+                    charges = [
+                        float(row[6])
+                        for row in data_rows(section("\n".join(block), "atoms")[2])
+                    ]
+                    self.assertAlmostEqual(sum(charges), 0.0, delta=1e-6)
                     atoms = [
                         CoordinateAtom(int(line[22:26]), line[17:20].strip(), line[12:16].strip(),
                                        (float(line[30:38]), float(line[38:46]), float(line[46:54])))

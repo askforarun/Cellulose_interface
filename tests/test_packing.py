@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import json
 import shutil
 import sys
 import tempfile
@@ -103,6 +104,35 @@ class PackingTests(unittest.TestCase):
             self.assertIn("attempt=2", str(caught.exception))
             self.assertIn("achieved_density=0.952381", str(caught.exception))
             self.assertEqual(existing.read_text(), "keep me\n")
+
+    def test_packmol_version_capture_cannot_block_and_report_records_version(self) -> None:
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name)
+            packmol = root / "packmol-fake"
+            packmol.write_text(
+                "#!" + sys.executable + "\n"
+                "import pathlib, re, sys\n"
+                "data = sys.stdin.read()\n"
+                "print('######## PACKMOL ########')\n"
+                "print('Version 21.0.1')\n"
+                "if not data: sys.exit(0)\n"
+                "output = pathlib.Path(re.search(r'^output (.+)$', data, re.M).group(1))\n"
+                "paths = re.findall(r'^structure (.+)$', data, re.M)\n"
+                "atoms = []\n"
+                "for resid, path in enumerate(paths, 1):\n"
+                "    for line in pathlib.Path(path).read_text().splitlines():\n"
+                "        if line.startswith(('ATOM  ', 'HETATM')):\n"
+                "            atoms.append(line[:6] + f'{len(atoms)+1:5d}' + line[11:22] + f'{resid:4d}' + line[26:])\n"
+                "output.write_text('\\n'.join(atoms + ['END', '']))\n"
+                "print('Success!')\n"
+            )
+            packmol.chmod(0o755)
+            arguments = self.arguments(root, packmol, "--max-attempts", "1")
+            with patch.object(sys, "argv", arguments), contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(pack_liquid_cellulose.main(), 0)
+            report = json.loads((root / "interface_packing_report.json").read_text())
+            self.assertEqual(report["tool_versions"]["packmol"], "21.0.1")
+            self.assertTrue((root / "interface.pdb").is_file())
 
 
 if __name__ == "__main__":

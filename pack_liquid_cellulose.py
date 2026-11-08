@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -56,13 +57,19 @@ def density_from_volume(molecules: int, molar_mass: float, volume_nm3: float) ->
     return molecules * molar_mass / (AVOGADRO_VOLUME_FACTOR * volume_nm3)
 
 
-def command_version(command: list[str]) -> str:
+def command_version(command: list[str], *, packmol: bool = False) -> str:
     try:
-        result = subprocess.run(command, capture_output=True, text=True, check=False)
-    except OSError as error:
-        return f"unavailable ({error})"
-    text = (result.stdout or result.stderr).strip()
-    return text.splitlines()[0] if text else f"exit status {result.returncode}"
+        result = subprocess.run(
+            command, stdin=subprocess.DEVNULL, capture_output=True, text=True,
+            check=False, timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return "unknown"
+    output = result.stdout + "\n" + result.stderr
+    if packmol:
+        match = re.search(r"Version\s+(\S+)", output, re.IGNORECASE)
+        return match.group(1) if match else "unknown"
+    return next((line.strip() for line in output.splitlines() if line.strip()), "unknown")
 
 
 def executable(value: str) -> str:
@@ -405,7 +412,6 @@ end structure
                         raise RuntimeError(
                             f"packed CRYST1 box mismatch: expected {final_box}, found {packed_box}"
                         )
-                    candidate.replace(output)
                     report = {
                         "requested_density_g_cm3": args.density,
                         "molecules": args.molecules,
@@ -426,7 +432,7 @@ end structure
                             "max_density_loss": args.max_density_loss,
                         },
                         "tool_versions": {
-                            "packmol": command_version([args.packmol, "--version"]),
+                            "packmol": command_version([args.packmol], packmol=True),
                             "openbabel": (
                                 command_version([args.obabel, "-V"])
                                 if obabel_used
@@ -436,7 +442,21 @@ end structure
                         },
                     }
                     report_path = output.with_name(output.stem + "_packing_report.json")
-                    report_path.write_text(json.dumps(report, indent=2) + "\n")
+                    with tempfile.NamedTemporaryFile(
+                        mode="w", dir=output.parent, prefix=f".{report_path.stem}.",
+                        suffix=".json", delete=False,
+                    ) as report_file:
+                        report_candidate = Path(report_file.name)
+                        try:
+                            report_file.write(json.dumps(report, indent=2) + "\n")
+                        except BaseException:
+                            report_candidate.unlink(missing_ok=True)
+                            raise
+                    try:
+                        report_candidate.replace(report_path)
+                    finally:
+                        report_candidate.unlink(missing_ok=True)
+                    candidate.replace(output)
                     print(f"Requested density:     {args.density:.6f} g/cm^3")
                     print(f"Final box Z:           {final_z:.6f} nm")
                     print(f"Liquid volume:         {volume:.6f} nm^3")

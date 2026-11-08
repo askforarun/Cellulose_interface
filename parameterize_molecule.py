@@ -85,6 +85,38 @@ def write_template_from_mol2(mol2: Path, pdb: Path, residue: str) -> None:
     pdb.write_text("\n".join((*output, "TER", "END", "")))
 
 
+def neutralize_mol2_charges(mol2: Path, target_charge: int) -> tuple[float, float]:
+    """Distribute antechamber's printed charge residual evenly across atoms."""
+    lines = mol2.read_text().splitlines(keepends=True)
+    try:
+        start = next(i for i, line in enumerate(lines) if line.strip() == "@<TRIPOS>ATOM") + 1
+    except StopIteration as error:
+        raise ValueError(f"mol2 has no atom section: {mol2}") from error
+    indices = []
+    charges = []
+    for index in range(start, len(lines)):
+        if lines[index].startswith("@<TRIPOS>"):
+            break
+        fields = lines[index].split()
+        if fields:
+            if len(fields) < 9:
+                raise ValueError(f"mol2 atom has no charge: {lines[index].rstrip()}")
+            indices.append(index)
+            charges.append(float(fields[8]))
+    if not charges:
+        raise ValueError(f"mol2 has no charged atoms: {mol2}")
+    residual = sum(charges) - target_charge
+    if abs(residual) > 0.01:
+        raise ValueError(f"mol2 charge residual {residual:+.6f} e exceeds 0.01 e")
+    shift = -residual / len(charges)
+    for index, charge in zip(indices, charges, strict=True):
+        fields = lines[index].split()
+        fields[8] = f"{charge + shift:.10f}"
+        lines[index] = " ".join(fields) + "\n"
+    mol2.write_text("".join(lines))
+    return residual, shift
+
+
 def executable(value: str) -> str:
     resolved = shutil.which(value)
     if resolved is None:
@@ -166,6 +198,7 @@ def run(args: argparse.Namespace) -> tuple[Path, ...]:
             cwd=temporary,
             check=True,
         )
+        charge_residual, per_atom_shift = neutralize_mol2_charges(mol2, args.net_charge)
         write_template_from_mol2(mol2, input_pdb, args.residue_name)
         subprocess.run(
             [
@@ -256,6 +289,8 @@ def run(args: argparse.Namespace) -> tuple[Path, ...]:
                     "smiles": args.smiles,
                     "residue_name": args.residue_name,
                     "net_charge": args.net_charge,
+                    "antechamber_charge_residual_e": charge_residual,
+                    "per_atom_charge_shift_e": per_atom_shift,
                     "rdkit_etkdg_seed": args.seed,
                     "mmff_energy_kcal_mol": conformer_energy,
                     "tleap_errors": 0,

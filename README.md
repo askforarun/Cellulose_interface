@@ -146,7 +146,8 @@ Used on:
   files.
 - **ParmEd**, importable by the Python interpreter used for parameterization.
 - **Open Babel** (`obabel`) and **Packmol** (`packmol`) on `PATH`. Packmol must
-  support the `pbc` input keyword.
+  support the `pbc` input keyword (version 20.15 or later). AmberTools23's
+  Packmol 20.14.3 cannot pack these periodic interfaces.
 - **GROMACS** for preprocessing and simulation; **Slurm** for the supplied
   batch scripts.
 
@@ -191,7 +192,7 @@ antechamber -h >/dev/null
 parmchk2 -h >/dev/null
 tleap -h >/dev/null
 obabel -V
-packmol --version
+packmol < /dev/null
 gmx --version
 ```
 
