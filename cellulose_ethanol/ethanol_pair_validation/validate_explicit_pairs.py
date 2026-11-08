@@ -13,7 +13,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "ethanol_parameters"
+SOURCE = ROOT
 PAIR_HEADER = "; ai aj funct fudgeQQ qi qj sigma14 epsilon14"
 TERMS = ("Bond", "Angle", "Proper-Dih.", "LJ-14", "Coulomb-14", "Potential")
 
@@ -36,7 +36,9 @@ def run(command: list[str], cwd: Path, stdin: str | None = None) -> str:
 def topology_parts(text: str) -> tuple[str, str]:
     molecule = text.index("[ moleculetype ]")
     system = text.index("[ system ]")
-    return text[:molecule].rstrip(), text[molecule:system].rstrip()
+    forcefield = "\n".join(line.rstrip() for line in text[:molecule].splitlines())
+    molecule_text = "\n".join(line.rstrip() for line in text[molecule:system].splitlines())
+    return forcefield.rstrip(), molecule_text.rstrip()
 
 
 def explicit_forcefield(native_forcefield: str) -> str:

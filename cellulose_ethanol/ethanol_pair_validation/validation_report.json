@@ -4,20 +4,20 @@
   "tolerance": 1e-05,
   "passed": true,
   "native": {
-    "Bond": 0.373527,
-    "Angle": 1.028991,
-    "Proper-Dih.": 0.007605,
-    "LJ-14": 0.690979,
-    "Coulomb-14": -34.822906,
-    "Potential": -8.548298
+    "Bond": 0.863471,
+    "Angle": 1.19646,
+    "Proper-Dih.": 0.010465,
+    "LJ-14": 0.706129,
+    "Coulomb-14": -34.878895,
+    "Potential": -7.906105
   },
   "explicit": {
-    "Bond": 0.373527,
-    "Angle": 1.028991,
-    "Proper-Dih.": 0.007605,
-    "LJ-14": 0.690979,
-    "Coulomb-14": -34.822906,
-    "Potential": -8.548298
+    "Bond": 0.863471,
+    "Angle": 1.19646,
+    "Proper-Dih.": 0.010465,
+    "LJ-14": 0.706129,
+    "Coulomb-14": -34.878895,
+    "Potential": -7.906105
   },
   "explicit_minus_native": {
     "Bond": 0.0,

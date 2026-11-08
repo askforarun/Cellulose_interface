@@ -734,8 +734,6 @@ Validate the conversion with an isolated molecule before relying on a new force-
 
 The worked example in this repository is a **cellulose–ethanol interface**, using GLYCAM for cellulose and GAFF2/AM1-BCC for ethanol. The accompanying test in [`cellulose_ethanol/ethanol_pair_validation/`](cellulose_ethanol/ethanol_pair_validation/) checks that the ethanol 1–4 interactions retain their original GAFF2 energies when represented under the GLYCAM global defaults used in the combined interface topology. It compares an isolated ethanol molecule using native GAFF2 type-1 pairs with the same molecule using explicit type-2 pairs. The saved `validation_report.json` reports matching energies within **1e-5 kJ/mol** for all compared terms. This validates the preservation of the liquid’s 1–4 scaling for this example; repeat the comparison for new liquid parameter sets. The isolated-molecule test does not establish bulk-liquid accuracy or equilibration of the cellulose–ethanol interface.
 
-The example validation script currently looks for source parameters in `cellulose_ethanol/ethanol_parameters/`, while this checkout stores them directly in `cellulose_ethanol/`. Before rerunning the example, change its `SOURCE` assignment to `SOURCE = ROOT`. Adapting it to another liquid also requires updating molecule/file names and any hard-coded native scaling factors.
-
 ### Independent Amber and OpenMM verification
 
 The complete combined topology was checked against Amber directly. "Complete"

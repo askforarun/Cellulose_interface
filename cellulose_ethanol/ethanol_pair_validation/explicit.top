@@ -1,17 +1,17 @@
 ;
-;   File /Users/arunsrikanthsridhar/Downloads/Cellulose_interface/cellulose_ethanol/ethanol_parameters/ethanol.top  was generated
+;   File /Users/arunsrikanthsridhar/Downloads/Cellulose_interface/cellulose_ethanol/ethanol.top  was generated
 ;   By user: arunsrikanthsridhar (501)
-;   On host:Aruns-MacBook-Pro.local 
-;   At date:Thu. October  4 20:58:26 2026 
+;   On host:Aruns-MacBook-Pro.local
+;   At date:Fri. October  5 05:41:51 2026
 ;
 ;   This is a standalone topology file
 ;
 ;   Created by:
-;   ParmEd:       parameterize_molecule.py, VERSION4.3.1 
+;   ParmEd:       parameterize_molecule.py, VERSION4.3.1
 ;   Executable:   parameterize_molecule.py
 ;   Library dir:  /opt/homebrew/Cellar/gromacs/2024.2/share/gromacs/top
 ;   Command line:
-;     parameterize_molecule.py --smiles CCO --residue-name ETO --net-charge 0 --prefix ethanol --output-directory ethanol_parameters --obabel /usr/local/bin/obabel
+;     cellulose_ethanol/parameterize_molecule.py --smiles CCO --residue-name ETO --net-charge 0 --prefix ethanol --output-directory cellulose_ethanol
 ;
 
 [ defaults ]
