@@ -539,6 +539,23 @@ python combine_gromacs_topologies.py \
   --system-name 'Cellulose I-beta ethanol interface'
 ```
 
+The combiner writes `system.top` with this layout for the example (the
+`[ molecules ]` counts come from the supplied coordinates):
+
+```gromacs
+#include "forcefield.itp"
+#include "slab.itp"
+#include "liquid.itp"
+
+[ system ]
+Cellulose I-beta ethanol interface
+
+[ molecules ]
+CELLULOSE_CHAIN 16
+CELLULOSE_CHAIN_RESTRAINED 16
+ETO 1000
+```
+
 After steps 1–4 the case directory contains:
 
 ```text
