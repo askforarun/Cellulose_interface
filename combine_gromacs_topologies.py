@@ -10,7 +10,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-VERSION = "0.5.0"
+VERSION = "0.6.0"
 SECTION = re.compile(r"^\s*\[\s*([^]]+?)\s*]\s*(?:;.*)?$")
 
 
@@ -366,6 +366,24 @@ def molecule_composition(text: str) -> list[tuple[str, int]]:
     return [(row[0], int(row[1])) for row in rows]
 
 
+def suffix(value: str) -> str:
+    if value and not all(character.isalnum() or character in "-_" for character in value):
+        raise argparse.ArgumentTypeError("suffix may contain only letters, digits, '-' and '_'")
+    return value
+
+
+def output_names(case_suffix: str) -> dict[str, str]:
+    """File names written in --output-directory; a suffix is appended to every stem."""
+    tail = f"_{case_suffix}" if case_suffix else ""
+    return {
+        "coordinates": f"interface{tail}.gro",
+        "topology": f"system{tail}.top",
+        "forcefield": f"forcefield{tail}.itp",
+        "slab": f"slab{tail}.itp",
+        "liquid": f"liquid{tail}.itp",
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(prog="combine-gromacs-topologies")
     parser.add_argument("--version", action="version", version=f"%(prog)s {VERSION}")
@@ -381,8 +399,18 @@ def main() -> int:
             "infer the liquid molecule count"
         ),
     )
-    parser.add_argument("--output-directory", required=True, type=Path)
-    parser.add_argument("--output-coordinates", default="interface.gro")
+    parser.add_argument(
+        "--output-directory",
+        type=Path,
+        default=Path("."),
+        help="directory for interface.gro, system.top, forcefield.itp, slab.itp and liquid.itp",
+    )
+    parser.add_argument(
+        "--suffix",
+        type=suffix,
+        default="",
+        help="case suffix: writes interface_SUFFIX.gro, system_SUFFIX.top, forcefield_SUFFIX.itp, ...",
+    )
     parser.add_argument("--axis", choices=("x", "y", "z"), default="z")
     parser.add_argument(
         "--interface-gap",
@@ -450,7 +478,8 @@ def main() -> int:
     secondary_name = molecule_name(secondary_block)
     output = args.output_directory.resolve()
     output.mkdir(parents=True, exist_ok=True)
-    coordinate_output = output / args.output_coordinates
+    names = output_names(args.suffix)
+    coordinate_output = output / names["coordinates"]
     if args.combined_coordinates:
         primary_atom_count, secondary_count, combined_box = use_combined_coordinates(
             args.combined_coordinates, coordinate_output, secondary_name
@@ -470,25 +499,25 @@ def main() -> int:
         f"{primary_defaults.generate_pairs} {primary_defaults.fudge_lj:g} "
         f"{primary_defaults.fudge_qq:g}"
     )
-    (output / "forcefield.itp").write_text(
+    (output / names["forcefield"]).write_text(
         "[ defaults ]\n; nbfunc comb-rule gen-pairs fudgeLJ fudgeQQ\n"
         + defaults_line
         + "\n\n[ atomtypes ]\n"
         + "\n".join(primary_type_lines + secondary_unique)
         + "\n"
     )
-    (output / "slab.itp").write_text(
+    (output / names["slab"]).write_text(
         "\n\n".join("\n".join(block).rstrip() for block in primary_blocks) + "\n"
     )
-    (output / "liquid.itp").write_text("\n".join(secondary_block).rstrip() + "\n")
-    (output / "system.top").write_text(
-        '#include "forcefield.itp"\n#include "slab.itp"\n#include "liquid.itp"\n\n'
+    (output / names["liquid"]).write_text("\n".join(secondary_block).rstrip() + "\n")
+    (output / names["topology"]).write_text(
+        f'#include "{names["forcefield"]}"\n#include "{names["slab"]}"\n#include "{names["liquid"]}"\n\n'
         f"[ system ]\n{args.system_name}\n\n[ molecules ]\n"
         + "".join(f"{name} {count}\n" for name, count in primary_composition)
         +
         f"{secondary_name} {secondary_count}\n"
     )
-    print(f"Wrote combined topology to {output}")
+    print(f"Wrote combined topology to {output}: " + ", ".join(names.values()))
     print(
         f"Slab scaling: LJ={primary_defaults.fudge_lj:g}, QQ={primary_defaults.fudge_qq:g}"
     )

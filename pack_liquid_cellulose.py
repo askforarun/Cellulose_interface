@@ -15,7 +15,7 @@ from combine_gromacs_topologies import CoordinateAtom, read_coordinates
 from water_models import MODELS, WATER_MOLAR_MASS, write_water_pdb
 
 AVOGADRO_VOLUME_FACTOR = 602.214076  # molecules nm^-3 from mol cm^-3
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 
 
 def positive_float(value: str) -> float:
@@ -44,6 +44,12 @@ def executable(value: str) -> str:
     if resolved is None:
         raise argparse.ArgumentTypeError(f"executable not found: {value}")
     return resolved
+
+
+def suffix(value: str) -> str:
+    if value and not all(character.isalnum() or character in "-_" for character in value):
+        raise argparse.ArgumentTypeError("suffix may contain only letters, digits, '-' and '_'")
+    return value
 
 
 def residue_name(value: str) -> str:
@@ -151,7 +157,18 @@ def parser() -> argparse.ArgumentParser:
     )
     result.add_argument("--molecules", required=True, type=positive_int)
     result.add_argument("--density", required=True, type=positive_float, help="g/cm^3")
-    result.add_argument("--output", type=Path, default=Path("interface.pdb"))
+    result.add_argument(
+        "--output-directory",
+        type=Path,
+        default=Path("."),
+        help="directory for the packed interface.pdb (default: current directory)",
+    )
+    result.add_argument(
+        "--suffix",
+        type=suffix,
+        default="",
+        help="case suffix: writes interface_SUFFIX.pdb, e.g. --suffix 3000",
+    )
     result.add_argument("--tolerance-angstrom", type=positive_float, default=2.0)
     result.add_argument("--maxit", type=positive_int, default=50)
     result.add_argument("--nloop", type=positive_int, default=5)
@@ -199,7 +216,7 @@ def main() -> int:
     if args.dry_run:
         return 0
 
-    output = args.output.resolve()
+    output = args.output_directory.resolve() / f"interface{'_' + args.suffix if args.suffix else ''}.pdb"
     output.parent.mkdir(parents=True, exist_ok=True)
     final_z = initial_z
     last_result: subprocess.CompletedProcess[str] | None = None

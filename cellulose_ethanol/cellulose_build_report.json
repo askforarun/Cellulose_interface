@@ -37,9 +37,9 @@
     "requested_length=40.000000 angstrom realized_length=41.520000 angstrom"
   ],
   "outputs": {
-    "coordinates": "structure.pdb",
-    "gromacs_coordinates": "structure.gro",
-    "gromacs_topology": "system.top"
+    "coordinates": "cellulose.pdb",
+    "gromacs_coordinates": "cellulose.gro",
+    "gromacs_topology": "cellulose.top"
   },
   "periodic_glycosidic_bond_validation": {
     "mapped_geometry": {

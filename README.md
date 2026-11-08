@@ -44,13 +44,18 @@ GLYCAM cellulose and a GAFF2 or rigid-water liquid.
 5. Run restrained minimization, fixed-area NPT, and NVT production.
 
 **Input → Output Mapping**
-- **Slab request** (allomorph, face, size, layers, restraints) → `structure.gro`,
-  `structure.pdb`, `system.top` and a build report.
+- **Slab request** (allomorph, face, size, layers, restraints) → `cellulose.gro`,
+  `cellulose.pdb`, `cellulose.top` and `cellulose_build_report.json`.
 - **Liquid SMILES** → `.mol2`, `.frcmod`, `.prmtop`, `.inpcrd`, `.top`, `.gro`
   and `.itp` files. **Water preset name** → `water_MODEL.top`, `.pdb`, `.itp`.
 - **Slab coordinates + liquid** → a packed `interface.pdb`.
 - **Slab topology + liquid topology + packed coordinates** → `interface.gro`,
   `system.top`, `forcefield.itp`, `slab.itp` and `liquid.itp`.
+
+Every command writes into `--output-directory` (default: the current
+directory) under fixed names that never clash, so one directory can hold the
+whole case. `--suffix` names a variant of the same case (for example
+`--suffix 3000` → `interface_3000.pdb`, `system_3000.top`, ...).
 
 Run commands from the `Cellulose_interface` project root.
 
@@ -247,7 +252,6 @@ unless stated otherwise; GROMACS box dimensions are in **nm**.
 | `--layers` | yes | Number of molecular layers in the slab |
 | `--width` | yes | Slab width (Å); rounded to fit the crystal lattice |
 | `--length` | yes | Slab length along the chains (Å); rounded to fit the lattice |
-| `--output` | yes | Output directory passed to CelluloseForge |
 | `--allomorph` | optional | Cellulose allomorph. Default: `I-beta` |
 | `--face` | optional | Miller index `H K L` of the exposed face. Default: `1 1 0` |
 | `--chain-boundary` | optional | `periodic` or `finite` chains. Default: `periodic` |
@@ -259,6 +263,7 @@ unless stated otherwise; GROMACS box dimensions are in **nm**.
 | `--cellulose-forge-executable` | optional | `cellulose-forge` command or path. Default: `cellulose-forge` on `PATH` |
 | `--tleap-executable` | optional | Path to `tleap` |
 | `--parmed-python` | optional | Python interpreter with ParmEd |
+| `--output-directory` | optional | Directory for `cellulose.gro`, `cellulose.pdb`, `cellulose.top` and `cellulose_build_report.json`. Default: current directory |
 | `--dry-run` | optional | Print the CelluloseForge command without running it |
 
 ### `parameterize_molecule.py`
@@ -289,7 +294,8 @@ unless stated otherwise; GROMACS box dimensions are in **nm**.
 | `--molecules` | yes | Total liquid molecules; must be even (half per surface) |
 | `--density` | yes | Initial packing density (g/cm³) |
 | `--residue-name` | optional | Liquid residue name. Default: `MOL`; water presets use `SOL` |
-| `--output` | optional | Packed PDB. Default: `interface.pdb` |
+| `--output-directory` | optional | Directory for the packed `interface.pdb`. Default: current directory |
+| `--suffix` | optional | Case suffix: writes `interface_SUFFIX.pdb` |
 | `--tolerance-angstrom` | optional | Packmol tolerance (Å). Default: `2.0` |
 | `--maxit`, `--nloop` | optional | Packmol iteration settings. Defaults: `50`, `5` |
 | `--max-attempts` | optional | Packing attempts before failing. Default: `5` |
@@ -304,10 +310,10 @@ unless stated otherwise; GROMACS box dimensions are in **nm**.
 |-----------|----------|-------------|
 | `--slab` | yes | Cellulose (GLYCAM) topology |
 | `--liquid` | yes | Native liquid or water topology |
-| `--output-directory` | yes | Directory for `system.top`, the ITP files and coordinates |
+| `--output-directory` | optional | Directory for `interface.gro`, `system.top`, `forcefield.itp`, `slab.itp` and `liquid.itp`. Default: current directory |
+| `--suffix` | optional | Case suffix: writes `interface_SUFFIX.gro`, `system_SUFFIX.top`, `forcefield_SUFFIX.itp`, `slab_SUFFIX.itp`, `liquid_SUFFIX.itp`, with matching includes |
 | `--combined-coordinates` | one of | Packed coordinates with slab atoms first; the liquid count is inferred |
 | `--slab-coordinates` + `--liquid-coordinates` | one of | Separate boxes to be assembled instead |
-| `--output-coordinates` | optional | Coordinate file name. Default: `interface.gro` |
 | `--axis` | optional | Stacking axis when assembling separate boxes. Default: `z` |
 | `--interface-gap` | optional | Gap at each periodic interface (nm) when assembling. Default: `0.0` |
 | `--coordinate-layout` | optional | `centered-slab` or `stacked` when assembling. Default: `centered-slab` |
@@ -388,7 +394,6 @@ GAFF2 parameters; it does not parameterize cellulose. The checked-in I-beta
 Example: four layers, approximately 40 Å wide and 40 Å long, with periodic cellulose chains and restraints on layers 2 and 3.
 
 ```bash
-mkdir -p cellulose_build
 # Restraints: keep --restrain-layers and --restraint-force to restrain layers 2
 # and 3, or replace both lines with --no-restraints (example below).
 python build_cellulose_slab.py \
@@ -402,7 +407,7 @@ python build_cellulose_slab.py \
   --force-field glycam \
   --restrain-layers 2 3 \
   --restraint-force 1000 1000 1000 \
-  --output cellulose_build
+  --output-directory cellulose_ethanol
 ```
 
 Choose restraints explicitly: pass either `--restrain-layers` or
@@ -420,7 +425,7 @@ python build_cellulose_slab.py \
   --vacuum 0 \
   --force-field glycam \
   --no-restraints \
-  --output cellulose_build
+  --output-directory cellulose_ethanol
 ```
 
 With `--no-restraints`, the topology has no position restraints. The builder
@@ -436,12 +441,14 @@ application-appropriate value. The option is included in `--dry-run` output,
 so the exact CelluloseForge request remains inspectable. Periodic chains use
 zero longitudinal padding.
 
-The wrapper forwards `--output` to CelluloseForge. Confirm the output-path convention with `cellulose-forge build --help`. The saved build report in this project records outputs named `structure.pdb`, `structure.gro`, and `system.top`; use the actual generated GRO and TOP paths in the next steps.
-
-The commands below assume these are `cellulose_build/structure.gro` and
-`cellulose_build/system.top`. This liquid-independent build directory can be
-reused for ethanol, water, or another compatible liquid. Cellulose dimensions
-are rounded to fit the crystal lattice. Review the generated build report for
+The builder runs CelluloseForge in a temporary `.cellulose_forge_build`
+directory inside `--output-directory`. It then writes `cellulose.gro`,
+`cellulose.pdb`, `cellulose.top` and `cellulose_build_report.json` there, and
+the report's `outputs` names those files. The `cellulose.*` names never clash
+with the combined system written in step 4, so the whole case can live in one
+directory. The slab files are liquid-independent and can be reused for
+ethanol, water, or another compatible liquid. Cellulose dimensions are rounded
+to fit the crystal lattice. Review the generated build report for
 realized dimensions, chain ordering, periodic connectivity, and restrained
 layers. The existing example has 32 chains (eight per layer), eight glucose
 units per chain, and 5,376 cellulose atoms, in a 4.7716 × 4.1520 nm lateral box.
@@ -469,13 +476,13 @@ Use `ethanol.top` as the liquid topology when combining systems. The `.itp` mole
 
 ```bash
 python pack_liquid_cellulose.py \
-  --cellulose-coordinates cellulose_build/structure.gro \
+  --cellulose-coordinates cellulose_ethanol/cellulose.gro \
   --smiles 'CCO' \
   --residue-name ETO \
   --molecules 1000 \
   --density 0.789 \
   --seed 1234567 \
-  --output cellulose_ethanol/interface.pdb
+  --output-directory cellulose_ethanol
 ```
 
 Density is in **g/cm³**; `0.789` is an example packing target. Width, length, and Packmol tolerance arguments are in **Å**, while GROMACS box dimensions printed by the packing script are in **nm**.
@@ -490,25 +497,24 @@ Useful options include `--tolerance-angstrom 2.0`, `--max-attempts 5`, and `--z-
 
 ```bash
 python combine_gromacs_topologies.py \
-  --slab cellulose_build/system.top \
+  --slab cellulose_ethanol/cellulose.top \
   --liquid cellulose_ethanol/ethanol.top \
   --combined-coordinates cellulose_ethanol/interface.pdb \
   --output-directory cellulose_ethanol \
   --system-name 'Cellulose I-beta ethanol interface'
 ```
 
-The resulting directory contains:
+After steps 1–4 the case directory contains:
 
 ```text
 cellulose_ethanol/
-├── interface.gro
-├── system.top
-├── forcefield.itp
-├── slab.itp
-└── liquid.itp
+├── cellulose.gro, cellulose.pdb, cellulose.top, cellulose_build_report.json   (step 1)
+├── ethanol.mol2, ethanol.top, ethanol.itp, ...                                (step 2)
+├── interface.pdb                                                              (step 3)
+└── interface.gro, system.top, forcefield.itp, slab.itp, liquid.itp            (step 4)
 ```
 
-Keep these five files together. The packed coordinates must list cellulose atoms first, followed by liquid molecules, with a liquid residue name matching the liquid topology. The packing script produces that ordering. Only orthorhombic boxes are supported by this workflow.
+Keep the five step-4 files together; they are the simulation inputs. The packed coordinates must list cellulose atoms first, followed by liquid molecules, with a liquid residue name matching the liquid topology. The packing script produces that ordering. Only orthorhombic boxes are supported by this workflow.
 
 Use the GLYCAM cellulose topology as `--slab` and the molecular-liquid or
 water topology as `--liquid`. The combiner retains the slab's global 1–4
@@ -608,7 +614,7 @@ The larger-reservoir comparison contains **3,000 ethanol molecules total**, with
 
 All case files remain directly in `cellulose_ethanol/` and use `_3000` names, preserving the previous simulations. The initial box is approximately **4.7716 × 4.1520 × 17.3879 nm**, with an initial geometric liquid thickness of **7.61 nm per face**. Packing used the simulated pure-liquid density of **0.761501 g/cm³** (7–8 ns average of the extended pure-ethanol NPT run) as an initial density target, not a constraint on the final NPT density. `interface_3000_build_report.json` records the construction checks, including 32,376 total atoms and 1,500 liquid molecules per face.
 
-Packing command from the project root (activate an environment with Open Babel and Packmol, or provide their executable paths):
+Packing and combining commands from the project root (activate an environment with Open Babel and Packmol, or provide their executable paths). `--suffix 3000` gives every file the `_3000` name:
 
 ```bash
 python pack_liquid_cellulose.py \
@@ -616,7 +622,14 @@ python pack_liquid_cellulose.py \
   --smiles CCO --residue-name ETO \
   --molecules 3000 --density 0.761501 \
   --seed 20261016 --maxit 200 --nloop 20 \
-  --output cellulose_ethanol/interface_3000.pdb
+  --output-directory cellulose_ethanol --suffix 3000
+
+python combine_gromacs_topologies.py \
+  --slab cellulose_ethanol/cellulose.top \
+  --liquid cellulose_ethanol/ethanol.top \
+  --combined-coordinates cellulose_ethanol/interface_3000.pdb \
+  --output-directory cellulose_ethanol --suffix 3000 \
+  --system-name 'Cellulose I-beta ethanol interface: 1500 ethanol molecules per face'
 ```
 
 The assembled starting files are `interface_3000.gro`, `system_3000.top`, `forcefield_3000.itp`, `slab_3000.itp`, and `liquid_3000.itp`. The combined topology uses the same cellulose molecule counts as before and `ETO 3000`; its include paths refer to the case-specific ITP filenames.
@@ -670,22 +683,23 @@ This writes `water_tip4pew.top`, `water_tip4pew.pdb`,
 
 ### Pack and combine a water interface
 
-Pack the same model on both cellulose surfaces without Open Babel:
+Pack the same model on both surfaces of the slab built in step 1 (no rebuild
+needed) without Open Babel:
 
 ```bash
 python pack_liquid_cellulose.py \
-  --cellulose-coordinates cellulose_build/structure.gro \
+  --cellulose-coordinates cellulose_ethanol/cellulose.gro \
   --water-model tip4pew \
   --molecules 3000 \
   --density 0.997 \
-  --output cellulose_water/interface.pdb
+  --output-directory cellulose_water
 ```
 
 Then combine it using the generated standalone water topology:
 
 ```bash
 python combine_gromacs_topologies.py \
-  --slab cellulose_build/system.top \
+  --slab cellulose_ethanol/cellulose.top \
   --liquid cellulose_water/water_tip4pew.top \
   --combined-coordinates cellulose_water/interface.pdb \
   --output-directory cellulose_water \

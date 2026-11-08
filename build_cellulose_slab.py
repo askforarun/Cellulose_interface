@@ -11,8 +11,18 @@ import sys
 from pathlib import Path
 
 
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 DEFAULT_FORGE = "cellulose-forge"
+STAGING_NAME = ".cellulose_forge_build"
+# CelluloseForge report output keys -> names written in --output-directory. The
+# cellulose.* names cannot clash with the combined system written by
+# combine_gromacs_topologies.py (interface.gro, system.top, ...).
+OUTPUT_NAMES = {
+    "coordinates": "cellulose.pdb",
+    "gromacs_coordinates": "cellulose.gro",
+    "gromacs_topology": "cellulose.top",
+}
+REPORT_NAME = "cellulose_build_report.json"
 DEFAULT_RESTRAINT_FORCE = (1000.0, 1000.0, 1000.0)
 RESTRAINT_DEFINE = "POSRES_CELLULOSE"
 NO_RESTRAINT_MARKER = (
@@ -79,7 +89,12 @@ def cli() -> int:
     )
     parser.add_argument("--tleap-executable", type=Path)
     parser.add_argument("--parmed-python", type=Path)
-    parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument(
+        "--output-directory",
+        type=Path,
+        default=Path("."),
+        help="directory for cellulose.gro, cellulose.pdb, cellulose.top and cellulose_build_report.json",
+    )
     parser.add_argument(
         "--cellulose-forge-executable",
         default=DEFAULT_FORGE,
@@ -103,6 +118,8 @@ def cli() -> int:
             "install CelluloseForge 1.1.2 or pass --cellulose-forge-executable"
         )
 
+    output_directory = args.output_directory.resolve()
+    staging = output_directory / STAGING_NAME
     command = [
         forge,
         "build",
@@ -125,7 +142,7 @@ def cli() -> int:
         "--force-field",
         args.force_field,
         "--output",
-        str(args.output.resolve()),
+        str(staging),
     ]
     if args.padding_longitudinal is not None:
         command.extend(("--padding-longitudinal", str(args.padding_longitudinal)))
@@ -140,16 +157,43 @@ def cli() -> int:
     print(" ".join(command))
     if args.no_restraints:
         print(f"No position restraints; an empty {RESTRAINT_DEFINE} block will be added to the topology.")
+    print(f"CelluloseForge builds in {staging}; outputs are then written to {output_directory}")
     if args.dry_run:
         return 0
+    output_directory.mkdir(parents=True, exist_ok=True)
+    shutil.rmtree(staging, ignore_errors=True)
     completed = subprocess.run(command, check=False)
-    if completed.returncode != 0 or not args.no_restraints:
+    if completed.returncode != 0:
+        print(f"CelluloseForge failed; its partial output is kept in {staging}", file=sys.stderr)
         return completed.returncode
-    report = json.loads((args.output / "build_report.json").read_text())
-    topology = args.output / report["outputs"]["gromacs_topology"]
-    mark_unrestrained(topology)
-    print(f"Unrestrained topology marked for the supplied MDP files: {topology}")
+    written = collect_outputs(staging, output_directory)
+    if args.no_restraints:
+        mark_unrestrained(output_directory / OUTPUT_NAMES["gromacs_topology"])
+        print("Unrestrained topology marked for the supplied MDP files.")
+    shutil.rmtree(staging)
+    for path in written:
+        print(f"Wrote {path}")
     return 0
+
+
+def collect_outputs(staging: Path, output_directory: Path) -> list[Path]:
+    """Move CelluloseForge's outputs into output_directory under the cellulose.* names."""
+    report = json.loads((staging / "build_report.json").read_text())
+    outputs = report.get("outputs", {})
+    unknown = set(outputs) - set(OUTPUT_NAMES)
+    if unknown:
+        raise RuntimeError(f"unexpected CelluloseForge outputs {sorted(unknown)}; update OUTPUT_NAMES")
+    written = []
+    for key, source_name in outputs.items():
+        destination = output_directory / OUTPUT_NAMES[key]
+        (staging / source_name).replace(destination)
+        outputs[key] = OUTPUT_NAMES[key]
+        written.append(destination)
+    report["outputs"] = outputs
+    report_path = output_directory / REPORT_NAME
+    report_path.write_text(json.dumps(report, indent=2) + "\n")
+    written.append(report_path)
+    return written
 
 
 if __name__ == "__main__":
