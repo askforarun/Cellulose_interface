@@ -29,19 +29,6 @@ references:
         given-names: "Arun Srikanth"
     repository-code: "https://github.com/askforarun/cellulose-forge"
   - type: article
-    title: "Cellulose-Builder: A toolkit for building crystalline structures of cellulose"
-    authors:
-      - family-names: "Gomes"
-        given-names: "Thiago C. F."
-      - family-names: "Skaf"
-        given-names: "Munir S."
-    journal: "Journal of Computational Chemistry"
-    volume: 33
-    start: 1338
-    end: 1346
-    year: 2012
-    doi: 10.1002/jcc.22959
-  - type: article
     title: "GLYCAM06: A generalizable biomolecular force field. Carbohydrates"
     authors:
       - family-names: "Kirschner"

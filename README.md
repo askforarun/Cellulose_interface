@@ -118,9 +118,7 @@ repository** button exports it as APA or BibTeX.
 
 Please also cite the software and methods the workflow relies on:
 
-- **CelluloseForge 1.1.2**: https://github.com/askforarun/cellulose-forge, and
-  the Cellulose-Builder toolkit it builds on: T. C. F. Gomes and M. S. Skaf,
-  *J. Comput. Chem.* **33**, 1338–1346 (2012), doi:10.1002/jcc.22959.
+- **CelluloseForge 1.1.2**: https://github.com/askforarun/cellulose-forge.
 - **GLYCAM06** (cellulose): K. N. Kirschner *et al.*, *J. Comput. Chem.*
   **29**, 622–655 (2008), doi:10.1002/jcc.20820.
 - **GAFF** (liquid): J. Wang *et al.*, *J. Comput. Chem.* **25**, 1157–1174
@@ -360,7 +358,10 @@ name used in the packed coordinates.
 2. **Liquid parameters.** `parameterize_molecule.py` generates a deterministic
    RDKit ETKDG/MMFF conformer, assigns GAFF2 types and AM1-BCC charges with antechamber,
    adds missing parameters with parmchk2, and builds Amber and GROMACS
-   topologies with tleap and ParmEd.
+   topologies with tleap and ParmEd. Before tleap, it distributes antechamber's
+   charge-rounding residual evenly across the atoms to reach `--net-charge`;
+   residuals above 0.01 e are refused. The original residual and per-atom shift
+   are recorded in `PREFIX_parameterization_report.json`.
 3. **Packing.** `pack_liquid_cellulose.py` keeps the cellulose X/Y box lengths
    and centres the slab along Z. It places half the liquid on each surface. The
    initial Z length comes from the liquid mass, target density, lateral area
