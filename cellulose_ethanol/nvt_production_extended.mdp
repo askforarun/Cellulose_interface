@@ -1,5 +1,7 @@
-; Fresh 2 ns restrained NVT after extended NPT (2.5–4.5 ns).
-; Keep the final NPT box, velocities, and restrained cellulose coordinates.
+; Fresh 2 ns NVT after extended NPT (2.5–4.5 ns).
+; Keep the final NPT box, velocities, and cellulose restraint reference.
+; POSRES_CELLULOSE restrains the selected layers only for a slab built with
+; --restrain-layers; for a slab built with --no-restraints it has no effect.
 nsteps                  = 1000000
 continuation            = yes
 gen-vel                 = no

@@ -1,4 +1,6 @@
-; Restrained minimization: middle cellulose layers 2 and 3.
+; Minimization (example: layers 2 and 3 restrained).
+; POSRES_CELLULOSE restrains the selected layers only for a slab built with
+; --restrain-layers; for a slab built with --no-restraints it has no effect.
 integrator              = steep
 emtol                   = 500
 emstep                  = 0.01

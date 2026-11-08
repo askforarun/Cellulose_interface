@@ -1,4 +1,6 @@
-; 2.5 ns restrained fixed-X/Y NPT for 3000 ethanol molecules (1500 per face).
+; 2.5 ns fixed-X/Y NPT for 3000 ethanol molecules (1500 per face).
+; POSRES_CELLULOSE restrains the selected layers only for a slab built with
+; --restrain-layers; for a slab built with --no-restraints it has no effect.
 nsteps                  = 1250000
 continuation            = no
 gen-vel                 = yes

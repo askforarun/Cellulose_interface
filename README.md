@@ -63,6 +63,7 @@ Run commands from the `Cellulose_interface` project root.
   - [Recommended Conda installation](#recommended-conda-installation)
   - [Verify the installation](#verify-the-installation)
 - [Files](#files)
+  - [MDP files](#mdp-files)
 - [Command Reference](#command-reference)
 - [How It Works](#how-it-works)
   - [Encoding each force field's 1–4 scaling](#encoding-each-force-fields-14-scaling)
@@ -210,6 +211,30 @@ The installed command names are `build-cellulose-slab`,
 | `cellulose_ethanol/` | Existing ethanol/cellulose inputs, MDP templates, and pair-validation artifacts |
 | `cellulose_ethanol/run_restrained.sbatch` | Cluster submission script; all ethanol simulation inputs and outputs live directly in `cellulose_ethanol/` |
 
+### MDP files
+
+GROMACS parameter files supplied in `cellulose_ethanol/`:
+
+| File | Used by | Purpose |
+| --- | --- | --- |
+| `em.mdp` | `run_restrained.sbatch` | Steepest-descent minimization |
+| `npt.mdp` | `run_restrained.sbatch` | 500 ps NPT, 298.15 K, 1 bar; X/Y fixed, Z free |
+| `nvt_production.mdp` | `run_restrained.sbatch` | 2 ns NVT production |
+| `nvt_production_extended.mdp` | `extend_interface.sbatch` | Fresh 2 ns NVT after the extended NPT (2.5–4.5 ns) |
+| `em_3000.mdp` | `run_interface_3000.sbatch` | Minimization of the 3,000-ethanol system |
+| `npt_3000.mdp` | `run_interface_3000.sbatch` | 2.5 ns NPT of the 3,000-ethanol system; X/Y fixed, Z free |
+| `pure_ethanol/em.mdp` | `run_pure_ethanol.sbatch` | Minimization of the pure-ethanol box |
+| `pure_ethanol/npt_equil.mdp` | `run_pure_ethanol.sbatch` | 1 ns isotropic NPT equilibration |
+| `pure_ethanol/npt_sample.mdp` | `run_pure_ethanol.sbatch` | 2 ns NPT density sampling |
+| `ethanol_pair_validation/single_point.mdp` | `validate_explicit_pairs.py` | Single-point energy for the GROMACS pair-conversion check |
+| `topology_check.mdp` | manual use | Zero-step PME single point for checking a combined topology with `grompp` and `mdrun` |
+
+The interface files (`em`, `npt`, `nvt_production`, their `_3000` and extended
+versions) set `define = -DPOSRES_CELLULOSE`. They restrain the selected layers
+for a slab built with `--restrain-layers`, and work unchanged, with no
+restraints, for a slab built with `--no-restraints`. The pure-ethanol files
+apply no restraints.
+
 ## Command Reference
 
 Every command also accepts `--version` and `-h, --help`. Lengths are in **Å**
@@ -229,8 +254,8 @@ unless stated otherwise; GROMACS box dimensions are in **nm**.
 | `--vacuum` | optional | Vacuum padding (Å). Default: `0` |
 | `--padding-longitudinal` | optional | Total chain-axis padding (Å) for finite chains, for example `12` |
 | `--force-field` | optional | `glycam`, `charmm36` or `none`. Default: `glycam` |
-| `--restrain-layers` | optional | Layer numbers whose heavy atoms get position restraints |
-| `--restraint-force` | optional | Restraint force constants `FX FY FZ` (kJ/mol/nm²). Default: `1000 1000 1000` |
+| `--restrain-layers` or `--no-restraints` | yes (one) | Layer numbers whose heavy atoms get position restraints, or build an unrestrained slab |
+| `--restraint-force` | optional | Restraint force constants `FX FY FZ` (kJ/mol/nm²), with `--restrain-layers` only. Default: `1000 1000 1000` |
 | `--cellulose-forge-executable` | optional | `cellulose-forge` command or path. Default: `cellulose-forge` on `PATH` |
 | `--tleap-executable` | optional | Path to `tleap` |
 | `--parmed-python` | optional | Python interpreter with ParmEd |
@@ -311,7 +336,8 @@ unless stated otherwise; GROMACS box dimensions are in **nm**.
    atom, so every molecule is exactly integer-charged.
 5. **Simulation.** The Slurm scripts run restrained minimization, NPT with
    fixed X/Y and free Z, and NVT production. Restraints are switched on with
-   `define = -DPOSRES_CELLULOSE`.
+   `define = -DPOSRES_CELLULOSE`. A slab built with `--no-restraints` uses the
+   same MDP files and runs without restraints.
 
 ### Encoding each force field's 1–4 scaling
 
@@ -376,6 +402,30 @@ python build_cellulose_slab.py \
   --restraint-force 1000 1000 1000 \
   --output cellulose_build
 ```
+
+Choose restraints explicitly: pass either `--restrain-layers` or
+`--no-restraints`. For a fully unrestrained slab, replace the two restraint
+lines with `--no-restraints`:
+
+```bash
+python build_cellulose_slab.py \
+  --allomorph I-beta \
+  --face 1 1 0 \
+  --layers 4 \
+  --width 40 \
+  --length 40 \
+  --chain-boundary periodic \
+  --vacuum 0 \
+  --force-field glycam \
+  --no-restraints \
+  --output cellulose_build
+```
+
+With `--no-restraints`, the topology has no position restraints. The builder
+adds an empty `#ifdef POSRES_CELLULOSE … #endif` block, so the supplied MDP files
+and batch scripts, which define `POSRES_CELLULOSE`, run unchanged and apply no
+restraints. An unrestrained slab can drift as a whole along Z, so center on the
+cellulose when analyzing profiles.
 
 If needed, also pass `--cellulose-forge-executable /path/to/cellulose-forge`, `--tleap-executable /path/to/tleap`, or `--parmed-python /path/to/python`.
 

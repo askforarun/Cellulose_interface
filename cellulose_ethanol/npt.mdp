@@ -1,4 +1,6 @@
 ; 500 ps; start directly from minimization with new velocities.
+; POSRES_CELLULOSE restrains the selected layers only for a slab built with
+; --restrain-layers; for a slab built with --no-restraints it has no effect.
 nsteps                  = 250000
 continuation            = no
 gen-vel                 = yes
