@@ -273,9 +273,15 @@ unless stated otherwise; GROMACS box dimensions are in **nm**.
 | `--smiles` | yes | Molecule SMILES, for example `CCO` |
 | `--residue-name` | optional | 1–3 character residue name. Default: `MOL` |
 | `--net-charge` | optional | Net molecular charge for AM1-BCC. Default: `0` |
+| `--seed` | optional | RDKit ETKDG conformer seed. Default: `2026` |
 | `--prefix` | optional | Output file prefix. Default: `molecule` |
 | `--output-directory` | optional | Output directory. Default: current directory |
-| `--obabel`, `--antechamber`, `--parmchk2`, `--tleap` | optional | Executable names or paths. Defaults: found on `PATH` |
+| `--antechamber`, `--parmchk2`, `--tleap` | optional | Executable names or paths. Defaults: found on `PATH` |
+
+Conformer generation uses seeded RDKit ETKDG followed by MMFF94 optimization.
+The command writes `PREFIX_parameterization_report.json` with the seed and
+optimized conformer energy. Parameterization stops if parmchk2 marks a term
+for revision or tleap does not report zero errors.
 
 ### `prepare_water_model.py`
 
@@ -294,15 +300,23 @@ unless stated otherwise; GROMACS box dimensions are in **nm**.
 | `--molecules` | yes | Total liquid molecules; must be even (half per surface) |
 | `--density` | yes | Initial packing density (g/cm³) |
 | `--residue-name` | optional | Liquid residue name. Default: `MOL`; water presets use `SOL` |
+| `--liquid-template` | optional | Parameterized liquid PDB used as Packmol's template with `--smiles`; preserves topology-matching atom names. Open Babel is the fallback when omitted |
 | `--output-directory` | optional | Directory for the packed `interface.pdb`. Default: current directory |
 | `--suffix` | optional | Case suffix: writes `interface_SUFFIX.pdb` |
 | `--tolerance-angstrom` | optional | Packmol tolerance (Å). Default: `2.0` |
 | `--maxit`, `--nloop` | optional | Packmol iteration settings. Defaults: `50`, `5` |
 | `--max-attempts` | optional | Packing attempts before failing. Default: `5` |
-| `--z-growth-factor` | optional | Factor by which Z grows after a failed attempt. Default: `1.05` |
+| `--z-growth-factor` | optional | Factor by which only the liquid thickness grows after a failed attempt. Default: `1.05` |
+| `--max-density-loss` | optional | Maximum fractional loss from requested density after retry growth. Default: `0.05` |
 | `--seed` | optional | Packmol seed. Default: `1234567` |
 | `--packmol`, `--obabel` | optional | Executable names or paths. Defaults: found on `PATH` |
-| `--dry-run` | optional | Print the box calculation without packing |
+| `--dry-run` | optional | Print initial and retry box/density calculations without packing |
+
+Successful packing also writes `interface[_SUFFIX]_packing_report.json` with
+the requested and achieved density, volumes, attempts, seed, settings, and tool
+versions. A retry that would exceed `--max-density-loss` is refused. Packmol
+writes a temporary candidate, which is validated and atomically installed, so
+a failed run cannot destroy an existing packed interface.
 
 ### `combine_gromacs_topologies.py`
 
@@ -310,6 +324,7 @@ unless stated otherwise; GROMACS box dimensions are in **nm**.
 |-----------|----------|-------------|
 | `--slab` | yes | Cellulose (GLYCAM) topology |
 | `--liquid` | yes | Native liquid or water topology |
+| `--liquid-residue-name` | optional | Residue name in packed coordinates. Default: inferred from the liquid topology's `[ atoms ]` section |
 | `--output-directory` | optional | Directory for `interface.gro`, `system.top`, `forcefield.itp`, `slab.itp` and `liquid.itp`. Default: current directory |
 | `--suffix` | optional | Case suffix: writes `interface_SUFFIX.gro`, `system_SUFFIX.top`, `forcefield_SUFFIX.itp`, `slab_SUFFIX.itp`, `liquid_SUFFIX.itp`, with matching includes |
 | `--combined-coordinates` | one of | Packed coordinates with slab atoms first; the liquid count is inferred |
@@ -325,15 +340,15 @@ unless stated otherwise; GROMACS box dimensions are in **nm**.
    which builds the slab and its GLYCAM topology with tleap and ParmEd, with
    global 1–4 scaling of 1.0. Cellulose dimensions are rounded to fit the
    crystal lattice.
-2. **Liquid parameters.** `parameterize_molecule.py` generates 3D coordinates
-   with Open Babel, assigns GAFF2 types and AM1-BCC charges with antechamber,
+2. **Liquid parameters.** `parameterize_molecule.py` generates a deterministic
+   RDKit ETKDG/MMFF conformer, assigns GAFF2 types and AM1-BCC charges with antechamber,
    adds missing parameters with parmchk2, and builds Amber and GROMACS
    topologies with tleap and ParmEd.
 3. **Packing.** `pack_liquid_cellulose.py` keeps the cellulose X/Y box lengths
    and centres the slab along Z. It places half the liquid on each surface. The
    initial Z length comes from the liquid mass, target density, lateral area
-   and slab thickness; each failed attempt enlarges Z, so the initial density
-   can end up below the target.
+   and slab thickness. A failed attempt grows only the liquid region, and the
+   configured density-loss bound prevents an excessively dilute packed state.
 4. **Combination.** `combine_gromacs_topologies.py` keeps the slab's global
    defaults and writes the liquid's own 1–4 scaling into explicit type-2 pairs
    (see below). It requires matching nonbonded functions and combination rules,
@@ -375,7 +390,7 @@ pair_fudgeQQ = liquid_fudgeQQ
 
 Although the global scaling factors are set to 1.0 for GLYCAM, the liquid retains its original force-field-specific 1–4 scaling because those factors are specified directly for each liquid 1–4 pair. These per-pair scaling settings apply to intramolecular 1–4 interactions; it does not introduce a separate scaling factor for cellulose–liquid interactions. `parameterize_molecule.py` also writes an explicit-pair molecule ITP, but the combiner should receive the native liquid `.top` so that it can read its original defaults and type-1 pairs. Do not apply the conversion twice.
 
-The current converter supports combination rule 2 and ordinary three-field type-1 liquid pair rows. It rejects other pair formats rather than assuming their meaning. Review the source force-field conventions when introducing another liquid or topology source.
+The current converter supports combination rule 2 and ordinary three-field type-1 liquid pair rows. It rejects `[ pairtypes ]` and other pair formats rather than assuming their meaning. It also validates every packed liquid residue against the topology atom names and order. Review the source force-field conventions when introducing another liquid or topology source.
 
 The conversion is validated twice: within GROMACS for the liquid, and against Amber and OpenMM for the
 complete combined topology. See [Validation](#validation).
@@ -464,11 +479,12 @@ python parameterize_molecule.py \
   --smiles 'CCO' \
   --residue-name ETO \
   --net-charge 0 \
+  --seed 2026 \
   --prefix ethanol \
   --output-directory cellulose_ethanol
 ```
 
-This generates `ethanol.pdb`, `.mol2`, `.frcmod`, `.prmtop`, `.inpcrd`, `.top`, `.gro`, `.itp`, and `ethanol_atomtypes.itp` in `cellulose_ethanol/`.
+This generates `ethanol.pdb`, `.mol2`, `.frcmod`, `.prmtop`, `.inpcrd`, `.top`, `.gro`, `.itp`, `ethanol_atomtypes.itp`, and `ethanol_parameterization_report.json` in `cellulose_ethanol/`.
 
 Use `ethanol.top` as the liquid topology when combining systems. The `.itp` molecule file separately encodes explicit type-2 1–4 interactions. The script uses GAFF2 atom types and AM1-BCC charges.
 
@@ -478,6 +494,7 @@ Use `ethanol.top` as the liquid topology when combining systems. The `.itp` mole
 python pack_liquid_cellulose.py \
   --cellulose-coordinates cellulose_ethanol/cellulose.gro \
   --smiles 'CCO' \
+  --liquid-template cellulose_ethanol/ethanol.pdb \
   --residue-name ETO \
   --molecules 1000 \
   --density 0.789 \
@@ -489,9 +506,9 @@ Density is in **g/cm³**; `0.789` is an example packing target. Width, length, a
 
 The script retains the cellulose X/Y box lengths, centers the slab along Z, and places half the liquid molecules on each surface. The molecule count must therefore be even. Use the same SMILES and residue name as in parameterization so atom naming and molecule identification remain consistent.
 
-The initial Z length is calculated from the liquid mass, target density, lateral area, and slab thickness. Failed packing attempts increase the total Z dimension; the resulting initial liquid density can therefore be lower than the requested target. Packing density is an initial construction parameter, not a measurement of equilibrated bulk density.
+The initial Z length is calculated from the liquid mass, target density, lateral area, and slab thickness. Failed packing attempts grow only the liquid region. The command refuses a retry that exceeds the configured density loss and reports the achieved construction density. Packing density is an initial construction parameter, not a measurement of equilibrated bulk density.
 
-Useful options include `--tolerance-angstrom 2.0`, `--max-attempts 5`, and `--z-growth-factor 1.05`. `--dry-run` prints the initial box calculation without packing. Open Babel is required for SMILES liquids, but not for a `--water-model` preset.
+Useful options include `--tolerance-angstrom 2.0`, `--max-attempts 5`, `--z-growth-factor 1.05`, and `--max-density-loss 0.05`. `--dry-run` prints the initial and retry calculations without packing. Reuse the parameterized PDB with `--liquid-template`; Open Babel is only the fallback when that option is omitted.
 
 ### 4. Assemble the combined GROMACS system
 
@@ -620,6 +637,7 @@ Packing and combining commands from the project root (activate an environment wi
 python pack_liquid_cellulose.py \
   --cellulose-coordinates cellulose_ethanol/cellulose.gro \
   --smiles CCO --residue-name ETO \
+  --liquid-template cellulose_ethanol/ethanol.pdb \
   --molecules 3000 --density 0.761501 \
   --seed 20261016 --maxit 200 --nloop 20 \
   --output-directory cellulose_ethanol --suffix 3000
