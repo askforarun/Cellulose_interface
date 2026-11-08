@@ -6,6 +6,8 @@ water preset), packs the liquid on both cellulose surfaces, and writes a single
 combined **GROMACS** system. **Each force field keeps its own 1–4 scaling in the
 combined topology.** This is validated against Amber and OpenMM.
 
+![Cellulose–liquid interface workflow](Cellulose%E2%80%93liquid%20interface%20workflow.png)
+
 <p align="center">
   <img src="cellulose_ethanol/vmdscene.png" width="600" alt="Symmetric ethanol–cellulose–ethanol simulation box">
   <br>
